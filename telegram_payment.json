@@ -1,0 +1,493 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('edit_bot_token').item.json.bot_token }}/sendInvoice",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chat_id\": \"{{ $('webhook_node').item.json.body.message.chat.id }}\",\n  \"title\": \"your summary\",\n  \"description\": \"Get your sammary\",\n  \"provider_token\": \"\",\n  \"payload\": \"[{{ $('webhook_node').item.json.body.message.message_id }}]\",\n  \"currency\": \"XTR\",\n  \"prices\": [\n    { \"label\": \"Summary\", \"amount\": 1 }\n  ],\n  \"start_parameter\": \"summary\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -6640,
+        -880
+      ],
+      "id": "32ac9168-9527-4a04-bb97-f6467ff0febe",
+      "name": "send_invoice",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $('edit_bot_token').item.json.bot_token }}/answerPreCheckoutQuery ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"pre_checkout_query_id\": \"{{ $node[\"webhook_node\"].json[\"body\"][\"pre_checkout_query\"][\"id\"] }}\",\n  \"ok\": true\n}\n\n",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -7216,
+        96
+      ],
+      "id": "14e3142b-f09b-4947-a36e-879a6d0b4adf",
+      "name": "send_pre_checkout_query"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $node[\"webhook_node\"].json[\"body\"][\"message\"][\"text\"]}}",
+                    "rightValue": "^\\/",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "c49e1462-7622-4df6-872d-876af8b69eab"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "db3d3bf7-45a5-4361-a1f6-b923379da448",
+                    "leftValue": "={{ $node[\"webhook_node\"].json[\"body\"][\"message\"][\"successful_payment\"][\"invoice_payload\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "successful_payment"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -7216,
+        -864
+      ],
+      "id": "2ed75ec5-54fb-40fe-9e67-4aac97ff17e5",
+      "name": "switch_message_type"
+    },
+    {
+      "parameters": {
+        "content": "## Receives incoming HTTP POST requests from Telegram Bot API \n\n## Принимает входящие HTTP POST запросы от Telegram Bot API\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n### Input:\nHTTP POST requests with Telegram webhook data \n\nHTTP POST запросы с данными вебхука Telegram\n\n### Output:\nJSON data containing the webhook payload with message/update information\n\nJSON данные содержащие полезную нагрузку вебхука с информацией о сообщении/обновлении\n\n### Configuration\nMethod: POST\nPath: /<bot_token>/webhook<br>\nResponse mode: Response Node\n\n### Usage:\nAdd the bot token to the path instead of <your_bot_token>\nДобавьте токен бота в path вместо <your_bot_token>\n\n\n",
+        "height": 832,
+        "width": 560,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        -736
+      ],
+      "id": "c0e57732-bbbf-4a89-9982-03d0360aeb59",
+      "name": "Sticky Note",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/<your_bot_token>/webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -9120,
+        -496
+      ],
+      "id": "03940ef6-2c1c-44b3-8be3-6ae974c70f83",
+      "name": "webhook_node",
+      "webhookId": "3bb33e69-0adb-4c00-abf8-4f9db6f5192c"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"name\": \"Respond to Webhook\",\n  \"type\": \"n8n-nodes-base.respondToWebhook\",\n  \"typeVersion\": 1,\n  \"position\": [\n    500,\n    300\n  ],\n  \"parameters\": {\n    \"responseMode\": \"onReceived\",\n    \"responseCode\": 200,\n    \"responseData\": {\n      \"type\": \"json\",\n      \"json\": {\n        \"status\": \"ok\"\n      }\n    }\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -7824,
+        112
+      ],
+      "id": "81dee6ce-773b-4cf2-8c8d-22733d180854",
+      "name": "respond_to_webhook"
+    },
+    {
+      "parameters": {
+        "content": "## Sends immediate HTTP response back to Telegram to acknowledge webhook receipt\n\n## Отправляет немедленный HTTP ответ обратно в Telegram для подтверждения получения вебхука\n\n\n\n\n\n\n\n\n\n\n\n\n### Input: \nWebhook data from WebhookNode\nДанные вебхука из WebhookNode\n\n### Output: \nHTTP 200 response with JSON status\nHTTP 200 ответ с JSON статусом\n\n### Configuration: \nResponse: JSON \nFormat: Status: 200 OK\nBody: {\"status\": \"ok\"}\n",
+        "height": 688,
+        "width": 512,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -8000,
+        -144
+      ],
+      "id": "11e64b35-0b94-47ec-b0de-d92b651dcec2",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b0e7ce75-632b-497b-b7b9-670e1593e1c0",
+                    "leftValue": "={{ $node[\"webhook_node\"].json[\"body\"][\"message\"]}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "message"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c8102204-db9c-4156-a45b-c8d8ffb29543",
+                    "leftValue": "={{ $node[\"webhook_node\"].json[\"body\"][\"pre_checkout_query\"]}}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pre_checkout_query"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -7792,
+        -848
+      ],
+      "id": "a3495be7-5b92-40ca-a3e1-7649f6b01204",
+      "name": "switch_event_type"
+    },
+    {
+      "parameters": {
+        "content": "## Routes workflow based on Telegram event type (message vs pre_checkout_query)\n\n## Направляет рабочий процесс в зависимости от типа события Telegram (сообщение против pre_checkout_query)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n### Input: \nWebhook data from WebhookNode\nДанные вебхука из WebhookNode\n\n### Output: \nTwo possible paths:\n• message - when regular message exists\n• pre_checkout_query - when payment pre-checkout query exists\n\nДва возможных пути:\n• message - когда существует обычное сообщение\n• pre_checkout_query - когда существует запрос предварительной проверки платежа\n\n### Logic: \n• Checks if $node[\"WebhookNode\"].json[\"body\"][\"message\"] exists\n• Checks if $node[\"WebhookNode\"].json[\"body\"][\"pre_checkout_query\"] exists\n\n• Проверяет существование $node[\"WebhookNode\"].json[\"body\"][\"message\"]\n\n• Проверяет существование $node[\"WebhookNode\"].json[\"body\"][\"pre_checkout_query\"]",
+        "height": 864,
+        "width": 512,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -8000,
+        -1088
+      ],
+      "id": "2b6d742d-0b6c-4348-a299-6700a4c7b436",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Further routes messages based on content type (text command vs successful payment)\n\n## Дополнительно направляет сообщения в зависимости от типа контента (текстовая команда против успешного платежа)\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n### Input: \nMessage data from switch_event_type\nДанные сообщения из switch_event_type\n\n### Output: \nTwo possible paths:\n• text - when message contains text (command)\n• successful_payment - when message contains successful payment data\n\nДва возможных пути:\n• text - когда сообщение содержит текст (команду)\n• successful_payment - когда сообщение содержит данные об успешном платеже\n\n### Logic: \n• Checks if message text exists (for commands starting with \"/\")\n• Checks if successful_payment.invoice_payload exists\n\n• Проверяет существование текста сообщения (для команд начинающихся с \"/\")\n• Проверяет существование successful_payment.invoice_payload",
+        "height": 864,
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        -1088
+      ],
+      "id": "78e92130-dd27-43a1-ac11-d9862267cdd1",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Approves pre-checkout query to allow payment completion \n\n## Одобряет запрос предварительной проверки для разрешения завершения платежа\n\n\n\n\n\n\n\n\n\n\n\n### Input: \nPre-checkout query data with query ID\nДанные запроса предварительной проверки с ID запроса\n\n### Output: \nTelegram API confirmation of pre-checkout approval\nПодтверждение Telegram API об одобрении предварительной проверки\n\n### Configuration: \n• Method: POST\n• URL: https://api.telegram.org/bot{token}/answerPreCheckoutQuery\n• Response: {\"ok\": true} to approve payment (для одобрения платежа)",
+        "height": 688,
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -7424,
+        -144
+      ],
+      "id": "7bf77edf-b83c-4d37-bc2c-f6553c2e1b37",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Sends payment invoice to Telegram user using Stars currency\n\n## Отправляет счет на оплату пользователю Telegram используя валюту Stars\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n### Input: \nMessage data containing chat ID and message ID\nДанные сообщения содержащие chat ID и message ID\n\n### Output: \nTelegram API response confirming invoice sent\nОтвет Telegram API подтверждающий отправку счета\n\n### Configuration: \n• Method: POST\n• URL: https://api.telegram.org/bot{token}/sendInvoice\n• Currency: XTR (Telegram Stars)\n• Price: 1 Star\n• Title: \"your summary\"\n• Description: \"Description text message / Текстовое сообщение с описанием покупки\"\n\n",
+        "height": 752,
+        "width": 544,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -6832,
+        -1088
+      ],
+      "id": "deaf7cae-3ac1-439d-91d0-4c4827ed042b",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## This workflow handles Telegram Stars payments through a bot, processing incoming webhooks and managing the payment flow from invoice creation to completion.\n\n## Этот рабочий процесс обрабатывает платежи Telegram Stars через бота, обрабатывая входящие вебхуки и управляя потоком платежей от создания счета до завершения.\n\n\n## [Telegram Channel](https://t.me/vibe_bus)\n## [Telegram Chat](https://t.me/vibe_bus_chat)\n## [YouTube Channel](https://www.youtube.com/@vibe_business)  \n",
+        "height": 448,
+        "width": 3056,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -9344,
+        -1568
+      ],
+      "id": "c5044242-5436-4552-b7a3-68b263033be6",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "87e4368f-20be-44ea-9c9c-42fade5d2c72",
+              "name": "bot_token",
+              "value": "<your_bot_token>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -8448,
+        -560
+      ],
+      "id": "f1344187-6d0e-421a-ac4d-56f2064ee6ac",
+      "name": "edit_bot_token"
+    },
+    {
+      "parameters": {
+        "content": "## Allows easy editing of bot token in workflow without changing multiple nodes\n## Позволяет легко редактировать токен бота в воркфлоу без изменения множества нод\n\n\n\n\n\n\n\n\n\n### Input: \nNo input data required - static configuration node\nВходящие данные не требуются - статическая конфигурационная нода\n\n### Output: \nBot token string for use in other nodes\nСтрока токена бота для использования в других нодах\n\n### Logic: \n• Stores bot token as a workflow variable or expression\n• Provides centralized token management\n• Eliminates need to update token in multiple HTTP request nodes\n\n• Сохраняет токен бота как переменную воркфлоу или выражение\n• Обеспечивает централизованное управление токеном\n• Устраняет необходимость обновления токена в множестве HTTP request нод\n\n### Usage:\nReference this node's output in other nodes: `{{ $node[\"edit_bot_token\"].json.token }}`\nPlease note that the token must be inserted separately into the first webhook.\n\nСсылайтесь на выход этой ноды в других нодах: `{{ $node[\"edit_bot_token\"].json.token }}`\nУчтите, что в первый вебхук токен нужно вставить отдельно",
+        "height": 832,
+        "width": 720
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -8752,
+        -736
+      ],
+      "id": "9a5b38db-28a1-4f25-be36-cb1096dea611",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "# Changing Currency in Telegram Bot Payments\n# Изменение валюты в Telegram Bot Payments\n\n## All Supported Currencies\n## Все поддерживаемые валюты\n\n### Telegram Stars\n### Telegram Stars\n- **XTR** - Telegram Stars (no external provider required)\n- **XTR** - Telegram Stars (не требует внешнего провайдера)\n\n### Fiat Currencies (all require payment provider) | Fiat валюты (все требуют payment provider)\nUSD (US Dollar), EUR (Euro), RUB (Russian Ruble), GBP (British Pound), UAH (Ukrainian Hryvnia), BYN (Belarusian Ruble), KZT (Kazakhstani Tenge), UZS (Uzbekistani Som), GEL (Georgian Lari), TJS (Tajikistani Somoni), AMD (Armenian Dram), KGS (Kyrgyzstani Som), MDL (Moldovan Leu), AZN (Azerbaijani Manat), TRY (Turkish Lira), ILS (Israeli Shekel), JPY (Japanese Yen), CNY (Chinese Yuan), INR (Indian Rupee), BRL (Brazilian Real), MXN (Mexican Peso), CAD (Canadian Dollar), AUD (Australian Dollar), CHF (Swiss Franc), SEK (Swedish Krona), NOK (Norwegian Krone), DKK (Danish Krone), PLN (Polish Zloty), CZK (Czech Koruna), HUF (Hungarian Forint)\n\n## Payment Providers by Currency | Payment Providers по валютам\n\n### Stripe - USD, EUR, GBP, CAD, AUD, CHF, SEK, NOK, DKK, PLN, CZK, HUF\n### Yoomoney (ЮMoney) - RUB\n### Sberbank - RUB\n### Tranzzo - UAH\n### Fondy - UAH, USD, EUR\n\n## Documentation | Документация\n\n**Official Telegram Bot API Documentation:** | **Официальная документация Telegram Bot API:**\n- [Payments API](https://core.telegram.org/bots/api#payments)\n- [sendInvoice method](https://core.telegram.org/bots/api#sendinvoice)\n- [Supported currencies](https://core.telegram.org/bots/payments#supported-currencies)\n\n## Why Use HTTP Request Instead of Standard Telegram Nodes? | Почему используются HTTP Request вместо стандартных Telegram нод?\n\n### 1. **Limited Functionality of Standard Nodes** | **Ограниченная функциональность стандартных нод**\n- Standard Telegram nodes in n8n don't support all Telegram Bot API methods\n- Payments API appeared relatively recently and is missing from standard nodes\n- HTTP Request provides full control over all API parameters\n\n- Стандартные Telegram ноды n8n не поддерживают все методы Telegram Bot API\n- Payments API появился относительно недавно и отсутствует в стандартных нодах\n- HTTP Request дает полный контроль над всеми параметрами API\n\n### 2. **Payment Processing** | **Обработка платежей**\n- Webhooks are critical for payments - need to handle:\n  - `pre_checkout_query` - pre-checkout verification\n  - `successful_payment` - successful payment\n- Standard nodes don't support these specific events\n\n- Webhook'и критичны для payments - нужно обрабатывать:\n  - `pre_checkout_query` - предварительная проверка\n  - `successful_payment` - успешный платеж\n- Стандартные не поддерживают эти специфичные события\n\n### 3. **Customization** | **Кастомизация**\n```json\n// Full control over the request | Полный контроль над запросом\n{\n  \"chat_id\": \"{{ $('webhook_node').item.json.body.message.chat.id }}\",\n  \"title\": \"Custom Title\",\n  \"description\": \"Custom Description\", \n  \"provider_token\": \"custom_token\",\n  \"currency\": \"USD\",\n  \"prices\": [{\"label\": \"Item\", \"amount\": 100}],\n  \"photo_url\": \"https://example.com/image.jpg\",\n  \"need_email\": true,\n  \"send_email_to_provider\": true\n}\n```\n\n## Webhook Configuration | Конфигурация Webhook\n\n### Input:\n### Входящие данные:\nHTTP POST requests with Telegram webhook data\nHTTP POST запросы с данными вебхука Telegram\n\n### Output:\n### Исходящие данные:\nJSON data containing the webhook payload with message/update information\nJSON данные содержащие полезную нагрузку вебхука с информацией о сообщении/обновлении\n\n### Configuration | Конфигурация\nMethod: POST\nPath: /<bot_token>/webhook\nResponse mode: Response Node\n\n### Usage | Использование:\nAdd the bot token to the path instead of <your_bot_token>\nДобавьте токен бота в path вместо <your_bot_token>",
+        "height": 2336,
+        "width": 1312,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -10720,
+        -1568
+      ],
+      "id": "495e2993-6988-418c-93c8-5a3890c1f94c",
+      "name": "Sticky Note8"
+    }
+  ],
+  "connections": {
+    "switch_message_type": {
+      "main": [
+        [
+          {
+            "node": "send_invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "webhook_node": {
+      "main": [
+        [
+          {
+            "node": "edit_bot_token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch_event_type": {
+      "main": [
+        [
+          {
+            "node": "switch_message_type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "send_pre_checkout_query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "edit_bot_token": {
+      "main": [
+        [
+          {
+            "node": "switch_event_type",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "respond_to_webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "webhook_node": [
+      {
+        "headers": {
+          "host": "n8n.vibe-business.space",
+          "x-real-ip": "91.108.5.39",
+          "x-forwarded-for": "91.108.5.39",
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "n8n.vibe-business.space",
+          "connection": "upgrade",
+          "content-length": "481",
+          "content-type": "application/json",
+          "accept-encoding": "gzip, deflate"
+        },
+        "params": {},
+        "query": {},
+        "body": {
+          "update_id": 175579032,
+          "message": {
+            "message_id": 18,
+            "from": {
+              "id": 5102838218,
+              "is_bot": false,
+              "first_name": "Александр",
+              "last_name": "Мутев",
+              "username": "shushlon",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 5102838218,
+              "first_name": "Александр",
+              "last_name": "Мутев",
+              "username": "shushlon",
+              "type": "private"
+            },
+            "date": 1753506839,
+            "text": "тест"
+          }
+        },
+        "webhookUrl": "https://n8n.vibe-business.space/webhook/8378545243:AAGfOT8-GczWvadCKt4XmUN1g_D8oPrHbRs/webhook",
+        "executionMode": "production"
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6493dbe0c3b5c27c71fc40be5e147c7d7c7ad1feaffec3297ffe8f9f4617da35"
+  }
+}
