@@ -1,0 +1,426 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        0
+      ],
+      "id": "f8fa4558-a5db-4472-be90-92c44824e3e0",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "{{ $('Edit Fields1').item.json.google_doc }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $json.datetime }}\n\n{{ $json.error_output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -464
+      ],
+      "id": "9b8a60f9-8925-420b-b2de-d691474e92f2",
+      "name": "Add Logs To Google Drive1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "RR9nev1eGjVNlHri",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "formatDate",
+        "date": "={{ $('Error Trigger').item.json.execution.error.timestamp }}",
+        "format": "custom",
+        "customFormat": "yyyy-LL-dd HH:mm:ss",
+        "options": {
+          "timezone": true
+        }
+      },
+      "type": "n8n-nodes-base.dateTime",
+      "typeVersion": 2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "d9b88ce7-c20f-4281-96f5-4fe31e5b6abd",
+      "name": "Date & Time1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a brief message describing this error:\nWorkflow name: {{ $('Error Trigger').item.json.workflow.name }}\n\n Stack: {{ $('Error Trigger').item.json.execution.error.stack }}\n",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a trace stack analyzer. Your task is to describe the problem that arose during code execution in simple and understandable language.  At the input, you receive the name of the n8n workflow and the trace stack.  Your task is to explain what happened during execution in three sentences in a concise and understandable manner.  Important! You write in Russian."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        0,
+        0
+      ],
+      "id": "26638288-18b3-4759-bac8-ef43f0c45bb2",
+      "name": "Basic LLM Chain1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-nano-2025-04-14",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-nano-2025-04-14"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        208
+      ],
+      "id": "157ec03a-6d5a-41fe-b2df-e7bd8c78ab31",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "701c9d41-4f11-4672-81a9-e14f21ca87ac",
+              "name": "tg_id",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "9155e14c-88c0-4caf-9722-81adab1b79dc",
+              "name": "tg_msg",
+              "value": "=🔔 <b>Ошибка в {{ $('Error Trigger').item.json.workflow.name }}!</b> \n\n<a href=\"{{ $('Error Trigger').item.json.execution.url }}\">Execution</a>  \n\n{{ $('Basic LLM Chain1').item.json.text }}\n",
+              "type": "string"
+            },
+            {
+              "id": "5a120b9e-ce0f-4e31-9852-93d1880dc0e3",
+              "name": "datetime",
+              "value": "={{ $json.formattedDate }}",
+              "type": "string"
+            },
+            {
+              "id": "ddc1eac5-5a14-4f9f-bc01-452574191f50",
+              "name": "error_output",
+              "value": "={\n  \"execution\": {{ JSON.stringify($('Error Trigger').item.json.execution) }},\n  \"workflow\": {{ JSON.stringify($('Error Trigger').item.json.workflow) }}\n}",
+              "type": "string"
+            },
+            {
+              "id": "fc88193b-07c3-4b0b-870c-ebe63d7ad65a",
+              "name": "n8n_doctor_url",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "b7aca591-c382-465d-8dba-098eee387736",
+              "name": "google_doc",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "35ac6484-73a3-48a7-8c89-e207e9a982a0",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Edit Fields1').item.json.tg_id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "={{ $('Edit Fields1').item.json.tg_msg }}",
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        -160
+      ],
+      "id": "1febbd6b-fa4d-46f2-ade1-3a7ecec62484",
+      "name": "Send Alert To Tg1",
+      "webhookId": "75e367fc-0e2f-4fb1-b654-58ce2d4789d4",
+      "credentials": {
+        "telegramApi": {
+          "id": "hpFgXZfLhAZl8fiT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "error_output",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        -160
+      ],
+      "id": "ee0e9fa3-1a7c-4516-ba8a-9720fd6e1df8",
+      "name": "Convert to File1"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "vIv8mRvvhOHtjZrh",
+          "mode": "list",
+          "cachedResultName": "Execute Error Workflow"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1520,
+        192
+      ],
+      "id": "289499fa-fa29-40d4-bddb-59239aab5f20",
+      "name": "Using the backup API"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "{{ $('Edit Fields1').item.json.n8n_doctor_url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"execution\": {{ JSON.stringify($('Error Trigger').item.json.execution) }},\n  \"workflow\": {{ JSON.stringify($('Error Trigger').item.json.workflow) }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        480
+      ],
+      "id": "27595ff0-5e19-4551-9687-d922474b43d1",
+      "name": "Correcting the error",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "# Insert here:\n## - your tg_id (tg_id)\n## - the URL where requests for workflow repairs will be sent (n8n_doctor_url)\n## - a link to the Google document where logs will be recorded (google_doc)\n\n# Вставьте здесь:\n## - свой tg_id (tg_id)\n## - url-адрес, куда будут отправляться запросы на починку воркфлоу (n8n_doctor_url)\n## - ссылку на гугл документ, куда будут записываться логи (google_doc)",
+        "height": 912,
+        "width": 528
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        624,
+        -624
+      ],
+      "typeVersion": 1,
+      "id": "f4a033db-02e3-43df-bf02-f7b05ef68d8a",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Date & Time1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Date & Time1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Add Logs To Google Drive1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert to File1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Using the backup API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Correcting the error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File1": {
+      "main": [
+        [
+          {
+            "node": "Send Alert To Tg1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Error Trigger": [
+      {
+        "execution": {
+          "id": "21243",
+          "url": "https://n8n.vibe-business.space/workflow/vIv8mRvvhOHtjZrh/executions/21243",
+          "error": {
+            "level": "warning",
+            "tags": {},
+            "description": "403 - \"\"",
+            "timestamp": 1758458655686,
+            "context": {
+              "itemIndex": 0,
+              "request": {
+                "headers": {
+                  "accept": "application/json,text/html,application/xhtml+xml,application/xml,text/*;q=0.9, image/*;q=0.8, */*;q=0.7"
+                },
+                "method": "GET",
+                "uri": "https://httpbin.org/status/403",
+                "gzip": true,
+                "rejectUnauthorized": true,
+                "followRedirect": true,
+                "resolveWithFullResponse": true,
+                "followAllRedirects": true,
+                "timeout": 300000,
+                "encoding": null,
+                "json": false,
+                "useStream": true
+              }
+            },
+            "functionality": "regular",
+            "name": "NodeApiError",
+            "node": {
+              "parameters": {
+                "preBuiltAgentsCalloutHttpRequest": "",
+                "curlImport": "",
+                "method": "GET",
+                "url": "https://httpbin.org/status/403",
+                "authentication": "none",
+                "provideSslCertificates": false,
+                "sendQuery": false,
+                "sendHeaders": false,
+                "sendBody": false,
+                "options": {},
+                "infoMessage": ""
+              },
+              "type": "n8n-nodes-base.httpRequest",
+              "typeVersion": 4.2,
+              "position": [
+                208,
+                0
+              ],
+              "id": "35cff6a6-6b12-477e-b380-2d61ec57ed88",
+              "name": "HTTP Request",
+              "retryOnFail": false
+            },
+            "messages": [
+              "403 - \"\""
+            ],
+            "httpCode": "403",
+            "message": "Forbidden - perhaps check your credentials?",
+            "stack": "NodeApiError: Forbidden - perhaps check your credentials?\n    at ExecuteContext.execute (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-nodes-base@file+packages+nodes-base_@aws-sdk+credential-providers@3.808.0_asn1.js@5_1af219c3f47f2a1223ec4ccec249a974/node_modules/n8n-nodes-base/nodes/HttpRequest/V3/HttpRequestV3.node.ts:780:15)\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at WorkflowExecute.runNode (/usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_0c275070fd0434c00ffd62213b2bcae4/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1212:9)\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_0c275070fd0434c00ffd62213b2bcae4/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:1582:27\n    at /usr/local/lib/node_modules/n8n/node_modules/.pnpm/n8n-core@file+packages+core_@opentelemetry+api@1.9.0_@opentelemetry+sdk-trace-base@1.30_0c275070fd0434c00ffd62213b2bcae4/node_modules/n8n-core/src/execution-engine/workflow-execute.ts:2158:11"
+          },
+          "lastNodeExecuted": "HTTP Request",
+          "mode": "trigger"
+        },
+        "workflow": {
+          "id": "vIv8mRvvhOHtjZrh",
+          "name": "Execute Error Workflow"
+        }
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6493dbe0c3b5c27c71fc40be5e147c7d7c7ad1feaffec3297ffe8f9f4617da35"
+  }
+}
