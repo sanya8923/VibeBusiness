@@ -1,0 +1,971 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "options": {
+          "systemMessage": "# You are an AI agent for online client scheduling at a NIKAS barbershop.\n\n## Always follow the template:\n\n* Ask the client what services they want to book. Then, using the service listing tool, get a list of available services and suggest a suitable approach.\n\n* If the client wants to know what services we provide, use the appropriate options to get a list of services and share it with them.\n\n* Ask the client if they have a preference for a hairdresser.\n\n* Then, ask the client when they want to come.\n\n* Use the scheduler tool to get available slots.\n\n* The scheduler tool returns slots for all hairdressers. If the client wants to reduce the number of hairdressers, you need to get all the slots for a given time period and select the slots for the desired hairdresser from the resulting data.\n\n* Before scheduling, ask the client their name and phone number.\n\n* When booking a client for a slot, please include their name, phone number, and selected service.\nClient Name\n\n* Please confirm all details before creating an appointment.\n\n* Only after confirming the schedule update for the selected slot.\n\n* If you have questions about services or prices, use the appropriate tool to display the list.\n\n* Avoid collecting unnecessary information and do not link services.\n\n* Always respond concisely, clearly, and politely.\n\n* Available actions: get information about the barbershop, get the schedule, get a list of services with prices, update the schedule for selected dates and times.\n\n* Appointments are available for the current week.\n\n* Today {{ $now }}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        976
+      ],
+      "id": "2bda9cdf-aaad-4604-a3dc-bad90ecdd475",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        1472
+      ],
+      "id": "a4d8b2ad-b2e1-4ccd-bf5c-54e76eae8771",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        1488
+      ],
+      "id": "43f5f7b0-5215-4838-86de-ef6096e8b9a9",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        976
+      ],
+      "id": "f298e181-82d6-4dab-b5ff-2cfed10a5643",
+      "name": "Telegram Trigger",
+      "webhookId": "9486b03b-37e9-4613-9bc9-98e6e4a2c15e",
+      "credentials": {
+        "telegramApi": {
+          "id": "hpFgXZfLhAZl8fiT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "38e5845e-9102-4a90-8b6a-67db7a4edace",
+              "name": "sessionId",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        976
+      ],
+      "id": "02e3b516-52eb-4f0b-8254-00cbe7018e32",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        704,
+        976
+      ],
+      "id": "5421a3a6-8b19-4244-8b2b-1c647f29efa6",
+      "name": "Send a text message",
+      "webhookId": "802d8fb1-91a6-4be5-81cb-466215a1797f",
+      "credentials": {
+        "telegramApi": {
+          "id": "hpFgXZfLhAZl8fiT",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.vibe-business.space/mcp/9cf6cb29-15c4-47a8-bb38-422acc115daf",
+        "serverTransport": "httpStreamable",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        1376
+      ],
+      "id": "ff25641b-4257-40b4-bfb1-3015ce0db27e",
+      "name": "MCP Client",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "3pKHENlIQJBEt50n",
+          "name": "Barbershop MCP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtMinute": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        480
+      ],
+      "id": "4d861093-6e29-472e-9f34-eb46e5ee85f3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ]
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        -96
+      ],
+      "id": "d51cab35-3935-4614-bdc6-c31112af72a2",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "content": "## Delete Schedule",
+        "height": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "ae14b9c6-03f5-4118-b73b-71fe01ef39a0",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Add Schedule\n",
+        "height": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        416
+      ],
+      "typeVersion": 1,
+      "id": "b148da2b-9c7e-47b5-9641-a39213538df6",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Входные данные от предыдущей ноды (Set):\n// Например:\n// items[0].json = { \"Barber 1\": \"Ivan\", \"Barber 2\": \"Aleksey\", \"Barber 3\": \"Danil\" }\n\nconst barbersInput = items[0].json; // автоматическое получение всех барберов\n\nconst slotMinutes = 30;\nconst startHour = 10;\nconst endHour = 19;\nconst daysInWeek = 7;\n\n// --- utility ---\nfunction getNextMonday(date = new Date()) {\n  const day = date.getDay();\n  const diff = (8 - day) % 7 || 7;\n  const monday = new Date(date);\n  monday.setHours(0,0,0,0);\n  monday.setDate(date.getDate() + diff);\n  return monday;\n}\nfunction pad(n) { return n < 10 ? '0' + n : ''+n; }\nfunction formatDT(date) {\n  return `${pad(date.getDate())}.${pad(date.getMonth()+1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:00`;\n}\n\nfunction formatDT_ISO(date) {\n  // Возвращает ISO 8601 формат: YYYY-MM-DDTHH:mm:ss\n  return date.toISOString().substring(0, 19); // для n8n можно использовать до секунд\n}\n\n// --- schedule generation ---\nlet schedule = [];\nlet id = 1;\nlet current = getNextMonday();\n\nconst barberFields = Object.values(barbersInput);\n\nfor (let d = 0; d < daysInWeek; d++) {\n  for (let h = startHour; h <= endHour; h++) {\n    for (let m = 0; m < 60; m += slotMinutes) {\n      if (h === endHour && m > 0) continue;\n      let slotDate = new Date(current);\n      slotDate.setHours(h, m, 0, 0);\n      schedule.push({\n        id: id++,\n        Time: formatDT_ISO(slotDate),\n        ...Object.fromEntries(barberFields.map(name => [name, \"Available\"]))\n      });\n    }\n  }\n  current.setDate(current.getDate() + 1);\n}\n\nreturn schedule;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        480
+      ],
+      "id": "c2f63c3e-2516-46f5-82b1-966ee0cfb51a",
+      "name": "Create Schedule"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "RvWjZCiy43oODdkW",
+          "mode": "list",
+          "cachedResultName": "Barbershop Schedule Test",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/RvWjZCiy43oODdkW"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Ivan",
+              "displayName": "Ivan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aleksey",
+              "displayName": "Aleksey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Danil",
+              "displayName": "Danil",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Anna",
+              "displayName": "Anna",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        928,
+        480
+      ],
+      "id": "70c96eb7-781b-4f07-b916-7a3562e6429d",
+      "name": "Insert Schedule"
+    },
+    {
+      "parameters": {
+        "operation": "deleteRows",
+        "dataTableId": {
+          "__rl": true,
+          "value": "RvWjZCiy43oODdkW",
+          "mode": "list",
+          "cachedResultName": "Barbershop Schedule Test",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/RvWjZCiy43oODdkW"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "createdAt",
+              "condition": "lt",
+              "keyValue": "={{ $json.timestamp }}"
+            }
+          ]
+        },
+        "options": {
+          "dryRun": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -96
+      ],
+      "id": "6a4abf27-6395-46a3-925d-993bba325e58",
+      "name": "Delete row(s)"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"Barber 1\": \"Ivan\",\n  \"Barber 2\": \"Aleksey\",\n  \"Barber 3\": \"Danil\", \n  \"Barber 4\": \"Anna\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        480
+      ],
+      "id": "b03190af-8c70-443a-a4f0-91b48ac0023b",
+      "name": "Edit Barber List"
+    },
+    {
+      "parameters": {
+        "content": "## Telegram Trigger\nЗапускает воркфлоу при новом сообщении в Telegram-чате с ботом барбершопа. Извлекает текст и chat ID клиента.",
+        "height": 352,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -384,
+        800
+      ],
+      "typeVersion": 1,
+      "id": "eb3bdc19-3dca-4a97-8eec-380ae2a417c8",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Edit Fields\nПрисваивает уникальный sessionId текущему обращению клиента (использует $now). Передаёт данные дальше.",
+        "height": 352,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -80,
+        800
+      ],
+      "typeVersion": 1,
+      "id": "ce901ebd-a67f-472b-b9fc-e9bc63721892",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## AI Agent\nАнализирует входящие сообщения, формирует вопросы клиенту (по шаблону), вызывает нужные MCP tools (например, получить услуги/цену, расписание, обновить слот). \"System message\" шаблон регулирует всю логику диалога и действия агента.\n\n### Требуемые изменения:\n* *Системный промпт агента требует доработки (добавление сценария диалога и конкретных скриптов ответов*",
+        "height": 448,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        192,
+        704
+      ],
+      "typeVersion": 1,
+      "id": "4b4dd125-3a29-401a-972f-f05c41f356ee",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Simple Memory\nВедёт короткую историю чата (окно 10 сообщений) для контекстности ответы AI.\n### Требуемые изменения:\n* *У Simple Memory слишком маленький контекст. Требуется замена на другой вид памяти (например, Redis)*",
+        "height": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        240,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "70b9ed43-a8e4-45b0-b5e8-ee6e8cac4105",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## MCP Client\nСоединяет агент с внешним сервисом MCP, чтобы запрашивать расписание, список услуг, цены и т.п.",
+        "height": 336,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        512,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "07ac4c30-3730-49f3-886a-bd2dad0a843a",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Edit Barber List\nХранит текущий список барберов в формате json:\n```\n{ \"Barber 1\": \"Ivan\", \n\"Barber 2\": \"Aleksey\", \n\"Barber 3\": \"Danil\", \n\"Barber 4\": \"Anna\" }\n```\nИспользуется для генерации расписания/слотов по сотрудникам.\n* *Данные в списке должны соответствовать существующим в таблице с расписанием столбикам*\n* *При изменениях в штате - корректировки в данном списке обязательны*\n",
+        "height": 544,
+        "width": 320,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        144,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "0085efb2-10d0-46e0-a683-0022fe420791",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Create Schedule\nКод-нод на JS. \nГенерирует расписание на неделю по всем барберам: 10:00–19:00, слоты по 30 мин, 7 дней. Для каждого барбера создаются \"Available\"-слоты и дата-время.\n* *Не менять*\n",
+        "height": 352,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        496,
+        288
+      ],
+      "typeVersion": 1,
+      "id": "476c8c1b-aa96-4e96-8917-974b3a1624f5",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Insert Schedule\nЗаписывает сгенерированные (\"Create Schedule\") слоты в Data Table (таблица расписания). \n\n* *Нужно поменять поле **Data table***\n",
+        "height": 336,
+        "width": 320,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        832,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "89a21ffd-0d8c-47ef-ac88-256bf321c201",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Chat Model\nМодель, которая отвечает за дальнейшее построение диалога и генерацию сообщений для AI Agent \n\n### Возможные изменения\n* *В ходе тестов нужно пробовать разные варианты моделей*",
+        "height": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -16,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "3acb9a1d-5937-4673-bce2-cd20df96f69a",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Delete row(s)\nУдаляет строки из таблицы расписания, где createdAt < текущей даты (по фильтру). \n* *Нужно поменять поле **Data table***",
+        "height": 304,
+        "width": 320,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        144,
+        -256
+      ],
+      "typeVersion": 1,
+      "id": "b677f077-ec50-4510-bf1c-331098d1c488",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "# Workflow 1 \n## Агент + добавление/удаление расписания\n\n### Воркфлоу позволяет:\n* Принимать запросы клиентов в Telegram\n* Вести диалог через AI-агента\n* Управлять расписанием для барберов (добавление новых слотов, очистка старых)\n* Взаимодействовать с сервером MCP для динамической информации (услуги, цены, подтверждение записи)\n* Сохранять расписание и бронирование в n8n Data Table",
+        "height": 2256,
+        "width": 1776,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -560,
+        -544
+      ],
+      "typeVersion": 1,
+      "id": "46084c3d-d317-4ff1-b2d4-3343f7f8c008",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "path": "9cf6cb29-15c4-47a8-bb38-422acc115daf"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        320
+      ],
+      "id": "5a5440a6-86ad-4d1a-8b01-da4fdd28c164",
+      "name": "MCP Server Trigger",
+      "webhookId": "9cf6cb29-15c4-47a8-bb38-422acc115daf",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "3pKHENlIQJBEt50n",
+          "name": "Barbershop MCP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to find out the working hours and address of the hair salon.\n",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "xGylaMOCL5vSuQ0g",
+          "mode": "list",
+          "cachedResultName": "Barbershop Data",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xGylaMOCL5vSuQ0g"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Title",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions0_Value', `To find the address, search for Address.\nTo find the working hours, search for Work schedule.`, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        736
+      ],
+      "id": "85a47567-b2cd-489e-ad08-2ff2c25c667d",
+      "name": "Get Barbershop Data"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "# This tool allows you to get the barbershop schedule in a flexible format:\n\n* You can display the schedule for all barbers (for a general search for available slots).\n\n* You can display the schedule for a specific selected barber only (for a personal search).\n\n* The display period can be any selected interval or the entire week (the interval is set using date filters).\n\n* The result is a list of available time slots for booking, according to the selected parameters.",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YT3XCpIdUyus1xNC",
+          "mode": "list",
+          "cachedResultName": "Barbershop Schedule",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/YT3XCpIdUyus1xNC"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Time",
+              "condition": "gte",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions0_Value', `Shows all slots starting from the specified date and time (inclusive). Use this to set the starting point of the range when searching for the closest possible entries.\n\n* This field only supports timestamps.\n\n* This field allows filtering for a specific time window within one day, as well as for entire dates.`, 'string') }}"
+            },
+            {
+              "keyName": "Time",
+              "condition": "lte",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions1_Value', `Shows all slots up to and including the specified date and time. Use this to limit your search to an upper bound, for example, to find available entries only for this week or a specific period.\n\n* This field only supports timestamps.\n\n* This field allows filtering for a specific time window within one day, as well as for entire dates.\n`, 'string') }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        832
+      ],
+      "id": "30fd0c0c-8efb-4a42-b131-e3eda3b745a0",
+      "name": "Get Barbershop Schedule"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to get a list of all available barbershop services and their prices.",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "T5JixH7IsZpL3RS4",
+          "mode": "list",
+          "cachedResultName": "Barbershop Services",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/T5JixH7IsZpL3RS4"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1,
+      "position": [
+        2224,
+        704
+      ],
+      "id": "f9febd7e-0c9f-4308-95e3-afa8282f24b9",
+      "name": "Get Barbershop Services"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool:\n* to add customer appointments for haircuts\n* to cancel customer appointments for haircuts",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "YT3XCpIdUyus1xNC",
+          "mode": "list",
+          "cachedResultName": "Barbershop Schedule",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/YT3XCpIdUyus1xNC"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "Time",
+              "keyValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('conditions0_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ivan": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Ivan', `New appointment for Master Ivan on the selected date and time.\n\nThe format for this field is:\n“Customer name, phone number (selected service)”`, 'string') }}",
+            "Aleksey": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Aleksey', `New appointment for Master Aleksey on the selected date and time.\n\nThe format for this field is:\n“Customer name, phone number (selected service)”`, 'string') }}",
+            "Danil": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Danil', `New appointment for Master Danil on the selected date and time.\n\nThe format for this field is:\n“Customer name, phone number (selected service)”`, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Ivan",
+              "displayName": "Ivan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Aleksey",
+              "displayName": "Aleksey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Danil",
+              "displayName": "Danil",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        880
+      ],
+      "id": "dc3503f2-7d36-4621-aa37-bfdd513c92fd",
+      "name": "Update Barbershop Schedule"
+    },
+    {
+      "parameters": {
+        "content": "## Get Barbershop Data\n### Логика фильтрации:\n**Для адреса:** ищет записи с Title = \"Address\"\n**Для рабочих часов:** ищет записи с Title = \"Work schedule\"\n**AI-управление:** Использует $fromAI() для автоматического определения нужного фильтра\n* *Нужно поменять поле **Data table***\n\n",
+        "height": 368,
+        "width": 384,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1264,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "d2c90f4b-1ae6-4b31-b4fd-23fd2a3d41de",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## Get Barbershop Schedule\n### Возможности:\n* Показ расписания для всех барберов (общий поиск свободных слотов)\n* Настраиваемый период отображения (интервал или вся неделя)\n### Фильтры времени:\nTime >= дата_начала (включительно)\nTime <= дата_окончания (включительно)\n*AI-управление:* Автоматическое заполнение временных фильтров через $fromAI()\n* *Нужно поменять поле **Data table***",
+        "height": 480,
+        "width": 384,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1664,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "68babf90-54f2-4f6e-ac29-3498693b5329",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "## Get Barbershop Services\n### Описание: \nПолный список всех доступных услуг с ценами (returnAll: true)\n* *Нужно поменять поле **Data table***",
+        "height": 352,
+        "width": 384,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2080,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "53c53577-4e79-421f-967b-dbe2e6df02d8",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "## Update Barbershop Schedule\n### Описание: \nИнструмент для добавления и отмены записей клиентов\n### Функции:\n* Добавление записи клиента на стрижку\n* Отмена записи клиента\n### Фильтр: \nПо времени записи (Time field)\nAI-управление: Автоматическое заполнение данных записи через $fromAI()\n* *Нужно поменять поле **Data table***",
+        "height": 528,
+        "width": 384,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2496,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "45fad764-33d6-41d0-bee9-21964031a522",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "content": "# Workflow 2 \n## MCP-сервер\n\n### MCP сервер предоставляет 4 основных инструмента для AI-агента барбершопа:\n* **Информация (адрес, часы работы)**\n**Таблица:** Barbershop Data\n**Тип запроса:** Get\n* **Расписание (просмотр свободных слотов)**\n**Таблица:** Barbershop Schedule\n**Тип запроса:** Get\n* **Услуги (список и цены)**\n**Таблица:** Barbershop Services\n**Тип запроса:** Get\n* **Бронирование (создание/отмена записей)**\n**Таблица:** Barbershop Schedule\n**Тип запроса:** Update\n\n### Для корректной работы необходимо создать 3 таблицы:\n* Barbershop Data\n**Колонки:**\n    * Title\n    * Description\n* Barbershop Schedule\n**Колонки:**\n    * Time\n    * Столбики с именами мастеров (один мастер - один столбик)\n* Barbershop Services\n**Колонки:**\n    * Title\n    * Description\n    * Price\n    * Duration\n\nВсе инструменты используют Data Tables как источники данных и поддерживают AI-управляемые параметры для автоматического заполнения полей на основе контекста диалога.",
+        "height": 1632,
+        "width": 1680,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1232,
+        -544
+      ],
+      "typeVersion": 1,
+      "id": "3014182b-768b-4004-b810-f7501d28f162",
+      "name": "Sticky Note17"
+    }
+  ],
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Barber List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Delete row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Schedule": {
+      "main": [
+        [
+          {
+            "node": "Insert Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Barber List": {
+      "main": [
+        [
+          {
+            "node": "Create Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Barbershop Data": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Barbershop Schedule": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Barbershop Services": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Barbershop Schedule": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "6493dbe0c3b5c27c71fc40be5e147c7d7c7ad1feaffec3297ffe8f9f4617da35"
+  }
+}
