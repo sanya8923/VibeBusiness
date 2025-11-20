@@ -1,0 +1,1867 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "videoUrl": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "additionalOptions": {
+          "includeTimestamps": true,
+          "formatOutput": "structured",
+          "maxLength": 50000
+        }
+      },
+      "type": "@cryptodevops/n8n-nodes-youtube-transcript.youTubeTranscript",
+      "typeVersion": 1,
+      "position": [
+        800,
+        64
+      ],
+      "id": "0f70588d-9962-452e-8987-410503990b9b",
+      "name": "YouTube Transcript"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-reasoner",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        2896,
+        448
+      ],
+      "id": "efc7005d-fba0-4f53-9725-34ae0f392a5b",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -96,
+        256
+      ],
+      "id": "47b8abec-36c1-4f6b-9288-e8a0e3f6a6d9",
+      "name": "Telegram Trigger",
+      "webhookId": "ab9dd529-2e1f-469b-b73a-cc314e0aa571",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAMWaRIanxd22casXZ3OWERnNQ1jvCYAAhyCAALsL5BIXGtKzl-mB3A2BA",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5616,
+        496
+      ],
+      "id": "39fd9da2-0929-4aaa-a08c-d6dcd095b0aa",
+      "name": "Send an animated file1",
+      "webhookId": "ae14085b-ab97-4974-a7a1-7dde3a4c60a6",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}\n\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты - эксперт по speaker diarization (разделению спикеров в аудио транскрипциях).\n\n## ТВОИ ЗАДАЧИ:\n\n* Определить моменты смены спикера\n\n* Разметить транскрипцию\n\n## КРИТЕРИИ СМЕНЫ СПИКЕРА:\n\n### ✅ ЯВНЫЕ признаки смены:\n\n* Вопрос-ответ (\"Как это работает?\" → \"Объясню\")\n\n* Прямое обращение (\"Ты упомянул...\", \"Что скажешь?\")\n\n* Представление (\"Я Саша\", \"А я гость Иван\")\n\n* Резкая смена стиля речи (формальный ↔ разговорный)\n\n* Перебивание, вклинивание в речь\n\n### ❌ НЕ являются сменой спикера:\n\n* Риторические вопросы одного человека (\"И что это значит? А вот что...\")\n\n* Смена темы в монологе\n\n* Цитирование (\"Он сказал: 'привет'\" - это один спикер)\n\n* Паузы и междометия (\"Хм... ну... короче...\")\n\n## ПРАВИЛА ФОРМАТИРОВАНИЯ:\n\n1. Формат: [Спикер N] MM:SS: \"текст реплики\"\n\n2. Каждая реплика - отдельная строка\n\n3. Группируй подряд идущие фразы одного спикера в ОДНУ реплику\n\n4. Сохраняй таймкод только в начале реплики спикера\n\n5. Если сомневаешься - НЕ разделяй (лучше один спикер)\n\nВозвращай **ТОЛЬКО** размеченную транскрипцию. Никаких объяснений или комментариев.\n\n## ФОРМАТ ВЫВОДА:\n\nВерни **СТРОГО** JSON без markdown блоков:\n{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n\n**НЕ** добавляй ```json или другой текст!\n"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "10.5: 'Привет, я Саша' 25.3: 'А я гость Иван' 40.1: 'Расскажи о n8n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "[Спикер 1] 10.5: 'Привет, я Саша' \n[Спикер 2] 25.3: 'А я гость Иван'   \n[Спикер 2] 40.1: 'Расскажи о n8n'"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "00:00: \"Всем привет. Я Саша, это Vibe Business.\"\\n00:03: \"Привет! А я Николай. Сегодня поговорим о ноде Merge. Это такой\"\\n00:05: \"маленький, но гордый узел, который\"\\n00:07: \"делает, в принципе, немного. Он просто\"\\n00:09: \"собирает данные в массивы, но делает это\"\\n00:11: \"с таким большим количеством способов. У\"\\n00:13: \"него столько параметров и опций, что это\"\\n00:16: \"достойно целого выпуска.\"\\n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "\"[Спикер 1] 00:00: \\\"Всем привет. Я Саша, это Vibe Business.\\\"\\n[Спикер 2] 00:03: \\\"Привет! А я Николай. Сегодня поговорим о node Merge. Это такой\\\"\\n[Спикер 2] 00:05: \\\"маленький, но гордый узел, который\\\"\\n[Спикер 2] 00:07: \\\"делает, в принципе, немного. Он просто\\\"\\n[Спикер 2] 00:09: \\\"собирает данные в массивы, но делает это\\\"\\n[Спикер 2] 00:11: \\\"с таким большим количеством способов. У\\\"\\n[Спикер 2] 00:13: \\\"него столько параметров и опций, что это\\\"\\n[Спикер 2] 00:16: \\\"достойно целого выпуска.\\\"\\n\""
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 5,
+          "delayBetweenBatches": 1000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        4432,
+        176
+      ],
+      "id": "84420c92-ea55-48ec-a859-167bf3093df9",
+      "name": "Edit Dialog",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Format Transcript').first().json.text || '';\nconst maxCharsPerChunk = 3000;\nconst chunks = [];\n\n// защита от пустого текста\nif (!text || text.length === 0) {\n  return [];\n}\n\n// разбиваем на параграфы (2 и более переносов считаем разделителем)\nconst paragraphs = text.split(/\\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);\n\nlet currentChunk = '';\n\n// вспомогательная функция — отталкиваемся от попытки не разрывать слова\nfunction splitLongParagraph(paragraph, limit) {\n  const parts = [];\n  // сохраняем пробельные токены, чтобы не склеивать слова\n  const tokens = paragraph.split(/(\\s+)/);\n  let part = '';\n\n  for (let i = 0; i < tokens.length; i++) {\n    const token = tokens[i];\n\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    // если накопленное есть — пушим\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    // если сам токен влезет в пустой контейнер — положим в part\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      // токен длиннее лимита — режем жёстко по символам\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substring(start, start + limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\n// основная сборка чанков\nfor (let i = 0; i < paragraphs.length; i++) {\n  const para = paragraphs[i];\n  const sep = currentChunk ? '\\n\\n' : '';\n  const candidate = currentChunk + sep + para;\n\n  if (candidate.length <= maxCharsPerChunk) {\n    // помещается целиком\n    currentChunk = candidate;\n    continue;\n  }\n\n  // candidate не влез — сначала пушим текущий чанк, если он не пуст\n  if (currentChunk.length > 0) {\n    chunks.push(currentChunk.trim());\n    currentChunk = '';\n  }\n\n  // теперь обработаем сам параграф\n  if (para.length <= maxCharsPerChunk) {\n    // параграф влезает в пустой чанк\n    currentChunk = para;\n  } else {\n    // параграф длинный — разбиваем и пушим части\n    const parts = splitLongParagraph(para, maxCharsPerChunk);\n    for (let p = 0; p < parts.length; p++) {\n      // Каждый элемент parts гарантированно <= limit\n      // Если следующий part можно было бы присоединить к следующему текущему чанку — \n      // но для простоты и надёжности просто пушим их как отдельные чанки.\n      chunks.push(parts[p].trim());\n    }\n    currentChunk = '';\n  }\n}\n\n// пушим последний чанк, если остался\nif (currentChunk.trim().length > 0) {\n  chunks.push(currentChunk.trim());\n}\n\n// формируем финальный output в формате n8n\nconst totalChunks = chunks.length;\nconst output = chunks.map((textChunk, idx) => ({\n  json: {\n    readable_text: textChunk,\n    chunk_number: idx + 1,\n    total_chunks: totalChunks\n  }\n}));\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4224,
+        176
+      ],
+      "id": "1ee83729-5f56-4c89-83fe-8a305ac6eeb0",
+      "name": "Text Chunk Splitter"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"content_type\": \"string\",\n  \"speakers_count\": \"number\",\n  \"confidence\": \"string\",\n  \"reasoning\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3152,
+        448
+      ],
+      "id": "8103c9bb-8edb-447a-ac65-e92d14099d66",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAMMaRISo3SkgmgKxfFHiyInsg4CiaIAAqOBAALsL5BIIJ3upavqIwABNgQ",
+        "additionalFields": {
+          "caption": "=Привет, я GazelleType 🦌💋 \n\nЯ быстро и изящно переберу копытцами по клавишам, чтобы превратить твоё YouTube-видео в текст 🪶✨\n\nПросто пришли мне ссылку на видео с YouTube, и я мигом начну печатать! 🎬⌨️ \n\n(Пока что работаю только с YouTube — не обижайся 💅)"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        576,
+        448
+      ],
+      "id": "89d06fad-28a5-4ebb-81a5-6de9522b2ccd",
+      "name": "Send Start Message",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAMoaRJIPWNo0Etp0NE3QzdfA4GNWLIAAj6EAALsL5BIbQmwNMDZz0A2BA",
+        "additionalFields": {
+          "caption": "=Я уже вся в работе!🦌 \n\nСкоро напишу❤️💋"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        352,
+        64
+      ],
+      "id": "d14ef658-3c01-424d-8970-4c471b5d8ead",
+      "name": "Sending a message about the start of work",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "formatted_text",
+        "options": {
+          "fileName": "transcription.txt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        5520,
+        48
+      ],
+      "id": "96dc4677-516f-486d-a5a9-2127006808fd",
+      "name": "Transcription"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "disable_notification": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5744,
+        48
+      ],
+      "id": "30016f05-6bfe-422c-a347-4f7a553e71f8",
+      "name": "Send Transcription",
+      "webhookId": "5d59edd2-40c3-4846-b130-695bd31ba523",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteMessage",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "messageId": "={{ $('Sending a message about the start of work').first().json.result.message_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5392,
+        496
+      ],
+      "id": "fbd5be09-6326-4bd9-a122-5254852dbdb4",
+      "name": "Delete a chat message",
+      "webhookId": "7e899114-2990-4447-be72-1379845f28a4",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4496,
+        400
+      ],
+      "id": "9f0a31ad-5eec-482c-8c30-1a572b1f0a51",
+      "name": "OpenAI Chat Model6",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4624,
+        400
+      ],
+      "id": "d0706049-8348-4540-856c-096376b8374e",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3024,
+        448
+      ],
+      "id": "8e0df849-e9e0-4caf-8f39-52934191c23f",
+      "name": "OpenAI Chat Model8",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.link_preview_options.url }}",
+                    "rightValue": "https://www.youtube.com",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "5492d33d-83ba-445a-877d-0684b22a0527"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "yt_link"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2f0ccb40-e6e7-404f-bccd-e242a6e1d7fe",
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.entities[0].type }}",
+                    "rightValue": "bot_command",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "bot_command"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        128,
+        256
+      ],
+      "id": "792407dd-0f7e-4534-b4d4-67ac9c3caa00",
+      "name": "Check Msg Type"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.text }}",
+                    "rightValue": "/start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ab9b0d36-c081-4613-a910-67963716a981"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start_command"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        352,
+        352
+      ],
+      "id": "9c9e3470-47d5-4557-95d7-64efcc659345",
+      "name": "Check Cmd Type"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        4368,
+        400
+      ],
+      "id": "e76940d2-a746-4116-a9ba-43680a1ab333",
+      "name": "DeepSeek Chat Model2",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output.text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        5072,
+        160
+      ],
+      "id": "ee38eed5-e3a7-4bb8-83bd-cfb14eaba98e",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "operation": "getVideoInfo",
+        "videoUrl": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "additionalOptions": {}
+      },
+      "type": "@cryptodevops/n8n-nodes-youtube-transcript.youTubeTranscript",
+      "typeVersion": 1,
+      "position": [
+        576,
+        64
+      ],
+      "id": "b84baddc-8c38-4a9e-ab38-0c6f05dda611",
+      "name": "YouTube Video Info"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1536,
+        288
+      ],
+      "id": "8bd5d702-5a28-415d-8343-007b9e59f3f9",
+      "name": "OpenAI Chat Model7",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        288
+      ],
+      "id": "da2ca47f-c083-46c3-ac2b-94931d2c867c",
+      "name": "DeepSeek Chat Model3",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output.text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2320,
+        48
+      ],
+      "id": "72030cf2-b76b-46df-8701-4819ae8df9fc",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "const maxChars = 3000;\n\nconst first = items[0] || {};\nconst j = first.json || {};\nlet fullText = '';\n\nif (typeof j.text === 'string' && j.text.length > 0) {\n  fullText = j.text;\n} else if (Array.isArray(j.transcript)) {\n\n  const formatTimestamp = (seconds) => {\n    const s = Number(seconds) || 0;\n    const hh = Math.floor(s / 3600);\n    const mm = Math.floor((s % 3600) / 60);\n    const ss = Math.floor(s % 60);\n    if (hh > 0) return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;\n    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;\n  };\n  fullText = j.transcript.map(seg => `${formatTimestamp(seg.start)}: \"${seg.text || ''}\"`).join('\\n');\n} else {\n\n  return [];\n}\n\nconst lines = fullText.split('\\n');\n\nconst chunks = [];\nlet current = '';\n\nfunction pushChunk(s) {\n  chunks.push(s.replace(/\\s+$/u, ''));\n}\n\nfunction splitLongLine(line, limit) {\n  const parts = [];\n  const tokens = line.split(/(\\s+)/);\n  let part = '';\n\n  for (const token of tokens) {\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substr(start, limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\nfor (const line of lines) {\n  const sep = current ? '\\n' : '';\n  const candidate = current + sep + line;\n\n  if (candidate.length <= maxChars) {\n    current = candidate;\n    continue;\n  }\n\n  if (current.length > 0) {\n    pushChunk(current);\n    current = '';\n  }\n\n  if (line.length <= maxChars) {\n    current = line;\n  } else {\n    const parts = splitLongLine(line, maxChars);\n    for (const p of parts) {\n      pushChunk(p);\n    }\n    current = '';\n  }\n}\n\nif (current.length > 0) pushChunk(current);\n\nconst total = chunks.length;\nconst output = chunks.map((text, idx) => ({\n  json: {\n    readable_text: text,\n    chunk_number: idx + 1,\n    total_chunks: total\n  }\n}));\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        64
+      ],
+      "id": "27459b52-aeac-4c75-8071-4a39ed05eb11",
+      "name": "Text Chunk Splitter1"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "def format_timestamp(seconds):\n    hours = int(seconds // 3600)\n    minutes = int((seconds % 3600) // 60)\n    secs = int(seconds % 60)\n    \n    if hours > 0:\n        return f\"{hours:02d}:{minutes:02d}:{secs:02d}\"\n    else:\n        return f\"{minutes:02d}:{secs:02d}\"\n\nlines = []\npreview_lines = []\nchar_count = 0\nmax_chars = 2000\n\nfor segment in items[0][\"json\"][\"transcript\"]:\n    start = segment.get(\"start\")\n    text = segment.get(\"text\", \"\")\n    \n    timestamp = format_timestamp(start)\n    line = f'{timestamp}: \"{text}\"'\n    \n    lines.append(line)\n    \n    if char_count + len(text) <= max_chars:\n        preview_lines.append(line)\n        char_count += len(text)\n\nfull_text = \"\\n\".join(lines)\npreview_text = \"\\n\".join(preview_lines)\n\nreturn [{\"json\": {\"text\": full_text, \"preview_text\": preview_text}}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        64
+      ],
+      "id": "6d10ab62-ffb0-4eb8-8708-dc93ec36a69f",
+      "name": "Format Transcript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты - редактор и форматтер транскрипций YouTube видео.\n\n## ТВОИ ЗАДАЧИ:\n\n1. Объединить мелкие фрагменты в смысловые блоки (1-3 законченных предложения)\n\n2. Исправить ошибки автоматического распознавания речи (ASR)\n\n3. Сохранить авторский стиль и интонацию\n\n4. Исправить технические термины n8n\n\n5. Исправить название канала, если оно озвучено неправильно\n\n## ПРАВИЛА ФОРМАТИРОВАНИЯ:\n\n* Таймкод ТОЛЬКО в начале каждого смыслового блока\n\n* Объединяй разорванные предложения в целые блоки\n\n* Блок = 1-3 законченных предложения по смыслу\n\n* Формат: MM:SS: \"текст блока\"\\n\n\n## ЧАСТЫЕ ОШИБКИ ASR ДЛЯ n8n:\n\n* номеch, мерч, мёрж → node Merge\n\n* инпут, импут → input\n\n* аутпут → output\n\n* айтем, итем → item\n\n* воркфлоу → workflow\n\n* триггер → trigger\n\n* ноды, нода → node, nodes\n\n* сплит → Split\n\n* агрегат, агрегейт → Aggregate\n\n* свитч → Switch\n\n* сет → Set\n\n## ФОРМАТ ВЫВОДА:\n\nВерни **СТРОГО** JSON без markdown блоков:\n{\n  \"text\": \"отформатированная транскрипция с таймкодами\"\n}\n\n**НЕ** добавляй ```json или другой текст!"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "## Название канала: Vibe Business  \\n\\n## Название видео: Node Merge в n8n  \\n\\n## Транскрипция: \\n00:00: \"Всем привет. Я Саша, это VI бизнес.\" \\n00:03: \"Сегодня поговорим о номеch. Это такой\" \\n00:05: \"маленький, но гордый узел, который\" \\n00:07: \"делает, в принципе, немного. Он просто\" \\n00:09: \"собирает данные в массивы, но делает это\" \\n00:11: \"с таким большим количеством способов. У\" \\n00:13: \"него столько параметров и опций, что это\" \\n00:16: \"достойно целого выпуска.\" \\n00:18: \"Чтобы понять, зачем это всё надо, надо\" \\n00:20: \"сначала разобраться, что вообще такое\""
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "00:00: \"Всем привет. Я Саша, это Vibe Business.\"\\n00:03: \"Сегодня поговорим о ноде Merge. Это такой маленький, но гордый узел, который делает, в принципе, немного. Он просто собирает данные в массивы, но делает это с таким большим количеством способов. У него столько параметров и опций, что это достойно целого выпуска.\"\\n00:18: \"Чтобы понять, зачем это всё надо, надо сначала разобраться, что вообще такое массивы.\""
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "## Название канала: N8N Tutorials  \\n\\n## Название видео: Работа с массивами  \\n\\n## Транскрипция: \\n00:22: \"Массив - это упорядоченная\" \\n00:24: \"коллекция данных, где каждый элемент\" \\n00:26: \"доступен по своему индексу. Вот массив с\" \\n00:28: \"фруктами, а это массив с цифрами. Вообще\" \\n00:31: \"массивы много чего могут содержать,\" \\n00:32: \"вплоть до массивов с массивами, в\" \\n00:34: \"которых будут содержаться другие массивы\" \\n00:36: \"с массивами, полные массивы. Ну, вы\" \\n00:38: \"поняли\""
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "00:22: \"Массив - это упорядоченная коллекция данных, где каждый элемент доступен по своему индексу. Вот массив с фруктами, а это массив с цифрами.\"\\n00:31: \"Вообще массивы много чего могут содержать, вплоть до массивов с массивами, в которых будут содержаться другие массивы с массивами, полные массивы. Ну, вы поняли.\""
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "## Название канала: Automation Channel  \\n\\n## Название видео: Как работает сплит ин батчес  \\n\\n## Транскрипция: \\n00:45: \"Сейчас мы используем ноду\" \\n00:47: \"сплит ин батчес, которая\" \\n00:49: \"разделяет айтемы на группы\" \\n00:51: \"и отправляет их в следующий нод\" \\n00:53: \"порциями. Это полезно когда\" \\n00:55: \"у вас API с лимитами\""
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "00:45: \"Сейчас мы используем ноду Split In Batches, которая разделяет items на группы и отправляет их в следующий node порциями.\"\\n00:53: \"Это полезно когда у вас API с лимитами.\""
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 5,
+          "delayBetweenBatches": 1000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1456,
+        64
+      ],
+      "id": "ab18444f-c86e-47f0-b0d7-2bf5ccd4181a",
+      "name": "Transcript Editor",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3856,
+        64
+      ],
+      "id": "621f721d-2a13-4e79-acf1-6e970d53f25e",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "41ffb4ec-800a-400a-a16b-2d3d04f473e5",
+              "leftValue": "={{ $json.output.content_type }}",
+              "rightValue": "dialogue",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        64
+      ],
+      "id": "9501f5a9-27f6-4495-ad2a-0897497e760e",
+      "name": "If Monologue"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Format Transcript').first().json.text || '';\nconst maxCharsPerChunk = 6000;\nconst chunks = [];\n\n// защита от пустого текста\nif (!text || text.length === 0) {\n  return [];\n}\n\n// разбиваем на параграфы (2 и более переносов считаем разделителем)\nconst paragraphs = text.split(/\\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);\n\nlet currentChunk = '';\n\n// вспомогательная функция — отталкиваемся от попытки не разрывать слова\nfunction splitLongParagraph(paragraph, limit) {\n  const parts = [];\n  // сохраняем пробельные токены, чтобы не склеивать слова\n  const tokens = paragraph.split(/(\\s+)/);\n  let part = '';\n\n  for (let i = 0; i < tokens.length; i++) {\n    const token = tokens[i];\n\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    // если накопленное есть — пушим\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    // если сам токен влезет в пустой контейнер — положим в part\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      // токен длиннее лимита — режем жёстко по символам\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substring(start, start + limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\n// основная сборка чанков\nfor (let i = 0; i < paragraphs.length; i++) {\n  const para = paragraphs[i];\n  const sep = currentChunk ? '\\n\\n' : '';\n  const candidate = currentChunk + sep + para;\n\n  if (candidate.length <= maxCharsPerChunk) {\n    // помещается целиком\n    currentChunk = candidate;\n    continue;\n  }\n\n  // candidate не влез — сначала пушим текущий чанк, если он не пуст\n  if (currentChunk.length > 0) {\n    chunks.push(currentChunk.trim());\n    currentChunk = '';\n  }\n\n  // теперь обработаем сам параграф\n  if (para.length <= maxCharsPerChunk) {\n    // параграф влезает в пустой чанк\n    currentChunk = para;\n  } else {\n    // параграф длинный — разбиваем и пушим части\n    const parts = splitLongParagraph(para, maxCharsPerChunk);\n    for (let p = 0; p < parts.length; p++) {\n      // Каждый элемент parts гарантированно <= limit\n      // Если следующий part можно было бы присоединить к следующему текущему чанку — \n      // но для простоты и надёжности просто пушим их как отдельные чанки.\n      chunks.push(parts[p].trim());\n    }\n    currentChunk = '';\n  }\n}\n\n// пушим последний чанк, если остался\nif (currentChunk.trim().length > 0) {\n  chunks.push(currentChunk.trim());\n}\n\n// формируем финальный output в формате n8n\nconst totalChunks = chunks.length;\nconst output = chunks.map((textChunk, idx) => ({\n  json: {\n    readable_text: textChunk,\n    chunk_number: idx + 1,\n    total_chunks: totalChunks\n  }\n}));\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        224
+      ],
+      "id": "f024d941-0f19-4373-9ce1-6492ca65441a",
+      "name": "Text Chunk Splitter2"
+    },
+    {
+      "parameters": {
+        "keep": "lastItems"
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        224
+      ],
+      "id": "935ca5ae-67df-490e-b90e-08db42f5f53a",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "let text = $input.item.json.text;\n\n// Если массив - объединяем все элементы\nif (Array.isArray(text)) {\n  text = text.join('\\n');\n}\n\n// Преобразуем в строку если нужно\ntext = String(text);\n\n// Убираем экранирование\ntext = text.replace(/\\\\n/g, '\\n');\ntext = text.replace(/^\"|\"$/g, '');\ntext = text.replace(/: \"([^\"]+)\"/g, ': $1');\ntext = text.replace(/(\\n)(\\[Спикер)/g, '\\n\\n$2');\n\nreturn {\n  json: {\n    formatted_text: text\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5296,
+        48
+      ],
+      "id": "f5a09857-8ce1-4283-9a73-9db2c3089d89",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "xG0I4oZxYhcw4PCy",
+          "mode": "list",
+          "cachedResultName": "GazelleType Users",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "tg_id",
+              "keyValue": "={{ $json.tg_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Count": "={{ $json.Count + 1 }} "
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tg_id",
+              "displayName": "tg_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Count",
+              "displayName": "Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        5616,
+        272
+      ],
+      "id": "2e01a5bc-cb6a-4ca7-9513-72b2595c7b22",
+      "name": "Update Count"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "xG0I4oZxYhcw4PCy",
+          "mode": "list",
+          "cachedResultName": "GazelleType Users",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "tg_id",
+              "keyValue": "={{ $json.result.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        5392,
+        272
+      ],
+      "id": "191b4368-7657-4bfd-befd-6f7a9a3bd3c2",
+      "name": "Get Count"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "xG0I4oZxYhcw4PCy",
+          "mode": "list",
+          "cachedResultName": "GazelleType Users",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tg_id": "={{ $json.message.from.id }}",
+            "username": "={{ $json.message.from.username }}",
+            "Count": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tg_id",
+              "displayName": "tg_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Count",
+              "displayName": "Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        800,
+        256
+      ],
+      "id": "01a2f56d-f56d-44b8-a940-5179d009b88a",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "xG0I4oZxYhcw4PCy",
+          "mode": "list",
+          "cachedResultName": "GazelleType Users",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "tg_id",
+              "keyValue": "={{ $json.message.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        576,
+        256
+      ],
+      "id": "cb7ff5d0-cc90-425a-8a3b-e38f9d668165",
+      "name": "If User Does Not Exist"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1664,
+        288
+      ],
+      "id": "53fb0980-c7ea-4cf2-8e86-2318e4cf4b42",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1968,
+        512
+      ],
+      "id": "6e8b34a1-25f7-4c72-aa5e-1b9a807a6d52",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        512
+      ],
+      "id": "41853098-1980-44cd-9631-e09cfaca3f2a",
+      "name": "DeepSeek Chat Model4",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты - редактор и форматтер транскрипций YouTube видео.\n\n## ТВОИ ЗАДАЧИ:\n\n1. Объединить мелкие фрагменты в смысловые блоки (1-3 законченных предложения)\n\n2. Исправить ошибки автоматического распознавания речи (ASR)\n\n3. Сохранить авторский стиль и интонацию\n\n4. Исправить технические термины n8n\n\n5. Исправить название канала, если оно озвучено неправильно\n\n## ПРАВИЛА ФОРМАТИРОВАНИЯ:\n\n* Таймкод ТОЛЬКО в начале каждого смыслового блока\n\n* Объединяй разорванные предложения в целые блоки\n\n* Блок = 1-3 законченных предложения по смыслу\n\n* Формат: MM:SS: \"текст блока\"\\n\n\n## ЧАСТЫЕ ОШИБКИ ASR ДЛЯ n8n:\n\n* номеch, мерч, мёрж → node Merge\n\n* инпут, импут → input\n\n* аутпут → output\n\n* айтем, итем → item\n\n* воркфлоу → workflow\n\n* триггер → trigger\n\n* ноды, нода → node, nodes\n\n* сплит → Split\n\n* агрегат, агрегейт → Aggregate\n\n* свитч → Switch\n\n* сет → Set\n\n## ФОРМАТ ВЫВОДА:\n\nВерни **СТРОГО** JSON без markdown блоков:\n{\n  \"text\": \"отформатированная транскрипция с таймкодами\"\n}\n\n**НЕ** добавляй ```json или другой текст!"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "## Название канала: Vibe Business  \\n\\n## Название видео: Node Merge в n8n  \\n\\n## Транскрипция: \\n00:00: \"Всем привет. Я Саша, это VI бизнес.\" \\n00:03: \"Сегодня поговорим о номеch. Это такой\" \\n00:05: \"маленький, но гордый узел, который\" \\n00:07: \"делает, в принципе, немного. Он просто\" \\n00:09: \"собирает данные в массивы, но делает это\" \\n00:11: \"с таким большим количеством способов. У\" \\n00:13: \"него столько параметров и опций, что это\" \\n00:16: \"достойно целого выпуска.\" \\n00:18: \"Чтобы понять, зачем это всё надо, надо\" \\n00:20: \"сначала разобраться, что вообще такое\""
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "00:00: \"Всем привет. Я Саша, это Vibe Business.\"\\n00:03: \"Сегодня поговорим о ноде Merge. Это такой маленький, но гордый узел, который делает, в принципе, немного. Он просто собирает данные в массивы, но делает это с таким большим количеством способов. У него столько параметров и опций, что это достойно целого выпуска.\"\\n00:18: \"Чтобы понять, зачем это всё надо, надо сначала разобраться, что вообще такое массивы.\""
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "## Название канала: N8N Tutorials  \\n\\n## Название видео: Работа с массивами  \\n\\n## Транскрипция: \\n00:22: \"Массив - это упорядоченная\" \\n00:24: \"коллекция данных, где каждый элемент\" \\n00:26: \"доступен по своему индексу. Вот массив с\" \\n00:28: \"фруктами, а это массив с цифрами. Вообще\" \\n00:31: \"массивы много чего могут содержать,\" \\n00:32: \"вплоть до массивов с массивами, в\" \\n00:34: \"которых будут содержаться другие массивы\" \\n00:36: \"с массивами, полные массивы. Ну, вы\" \\n00:38: \"поняли\""
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "00:22: \"Массив - это упорядоченная коллекция данных, где каждый элемент доступен по своему индексу. Вот массив с фруктами, а это массив с цифрами.\"\\n00:31: \"Вообще массивы много чего могут содержать, вплоть до массивов с массивами, в которых будут содержаться другие массивы с массивами, полные массивы. Ну, вы поняли.\""
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "## Название канала: Automation Channel  \\n\\n## Название видео: Как работает сплит ин батчес  \\n\\n## Транскрипция: \\n00:45: \"Сейчас мы используем ноду\" \\n00:47: \"сплит ин батчес, которая\" \\n00:49: \"разделяет айтемы на группы\" \\n00:51: \"и отправляет их в следующий нод\" \\n00:53: \"порциями. Это полезно когда\" \\n00:55: \"у вас API с лимитами\""
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "00:45: \"Сейчас мы используем ноду Split In Batches, которая разделяет items на группы и отправляет их в следующий node порциями.\"\\n00:53: \"Это полезно когда у вас API с лимитами.\""
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 1,
+          "delayBetweenBatches": 1000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        2016,
+        288
+      ],
+      "id": "63080d52-e5bd-41e5-9cea-85f8e0f4237d",
+      "name": "Transcript Editor1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2224,
+        512
+      ],
+      "id": "dd782805-227d-406a-9cd0-122755018945",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-reasoner",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        3408,
+        656
+      ],
+      "id": "a0a8f747-8bc0-4db0-9522-144dc0a648a9",
+      "name": "DeepSeek Chat Model1",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Транскрипция (последние 6000 символов): \n\n{{ $json.readable_text }}\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Проанализируй транскрипцию и определи, это монолог одного человека или диалог/беседа нескольких людей. \n\n## ПРИЗНАКИ ДИАЛОГА: \n\n* Смена стиля речи \n\n* Вопросы и ответы между разными голосами \n\n* Обращения (\"ты сказал\", \"как ты думаешь\") \n\n* Явная смена тем/мнений  \n\n## ПРИЗНАКИ МОНОЛОГА: \n\n* Единый стиль изложения \n\n* Последовательное объяснение \n\n* Автор говорит от первого лица без собеседников  \n\nВерни СТРОГО в формате JSON БЕЗ markdown блоков, дополнительных полей и дополнительного текста:\n{\n  \"content_type\": \"monologue\" или \"dialogue\",\n  \"speakers_count\": число,\n  \"confidence\": \"high/medium/low\",\n  \"reasoning\": \"объяснение\"\n}\n\nНЕ добавляй json или любой другой текст!\n\n❌ НЕПРАВИЛЬНО:\n{\"text\": \"{\\\"content_type\\\": \\\"dialogue\\\"}\"}\n{\"result\": {\"content_type\": \"dialogue\"}}\n```json\\n{\"content_type\": \"dialogue\"}\\n```\n\n✅ ПРАВИЛЬНО:\n{\"content_type\": \"dialogue\", \"speakers_count\": 2, \"confidence\": \"high\", \"reasoning\": \"...\"}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        3328,
+        432
+      ],
+      "id": "b8f41505-511a-4b98-b3e6-d7c46ea04224",
+      "name": "Detect Dialogue vs Monologue1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"content_type\": \"string\",\n  \"speakers_count\": \"number\",\n  \"confidence\": \"string\",\n  \"reasoning\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3536,
+        656
+      ],
+      "id": "34e211f3-0d8e-4229-b931-fd84c122d88b",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        3280,
+        656
+      ],
+      "id": "cf58f9d9-633a-46b7-8145-bb03b4fc592d",
+      "name": "OpenAI Chat Model9",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}\n\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты - эксперт по speaker diarization (разделению спикеров в аудио транскрипциях).\n\n## ТВОИ ЗАДАЧИ:\n\n* Определить моменты смены спикера\n\n* Разметить транскрипцию\n\n## КРИТЕРИИ СМЕНЫ СПИКЕРА:\n\n### ✅ ЯВНЫЕ признаки смены:\n\n* Вопрос-ответ (\"Как это работает?\" → \"Объясню\")\n\n* Прямое обращение (\"Ты упомянул...\", \"Что скажешь?\")\n\n* Представление (\"Я Саша\", \"А я гость Иван\")\n\n* Резкая смена стиля речи (формальный ↔ разговорный)\n\n* Перебивание, вклинивание в речь\n\n### ❌ НЕ являются сменой спикера:\n\n* Риторические вопросы одного человека (\"И что это значит? А вот что...\")\n\n* Смена темы в монологе\n\n* Цитирование (\"Он сказал: 'привет'\" - это один спикер)\n\n* Паузы и междометия (\"Хм... ну... короче...\")\n\n## ПРАВИЛА ФОРМАТИРОВАНИЯ:\n\n1. Формат: [Спикер N] MM:SS: \"текст реплики\"\n\n2. Каждая реплика - отдельная строка\n\n3. Группируй подряд идущие фразы одного спикера в ОДНУ реплику\n\n4. Сохраняй таймкод только в начале реплики спикера\n\n5. Если сомневаешься - НЕ разделяй (лучше один спикер)\n\nВозвращай **ТОЛЬКО** размеченную транскрипцию. Никаких объяснений или комментариев.\n\n## ФОРМАТ ВЫВОДА:\n\nВерни **СТРОГО** JSON без markdown блоков:\n{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n\n**НЕ** добавляй ```json или другой текст!\n"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "10.5: 'Привет, я Саша' 25.3: 'А я гость Иван' 40.1: 'Расскажи о n8n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "[Спикер 1] 10.5: 'Привет, я Саша' \n[Спикер 2] 25.3: 'А я гость Иван'   \n[Спикер 2] 40.1: 'Расскажи о n8n'"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "00:00: \"Всем привет. Я Саша, это Vibe Business.\"\\n00:03: \"Привет! А я Николай. Сегодня поговорим о ноде Merge. Это такой\"\\n00:05: \"маленький, но гордый узел, который\"\\n00:07: \"делает, в принципе, немного. Он просто\"\\n00:09: \"собирает данные в массивы, но делает это\"\\n00:11: \"с таким большим количеством способов. У\"\\n00:13: \"него столько параметров и опций, что это\"\\n00:16: \"достойно целого выпуска.\"\\n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "\"[Спикер 1] 00:00: \\\"Всем привет. Я Саша, это Vibe Business.\\\"\\n[Спикер 2] 00:03: \\\"Привет! А я Николай. Сегодня поговорим о node Merge. Это такой\\\"\\n[Спикер 2] 00:05: \\\"маленький, но гордый узел, который\\\"\\n[Спикер 2] 00:07: \\\"делает, в принципе, немного. Он просто\\\"\\n[Спикер 2] 00:09: \\\"собирает данные в массивы, но делает это\\\"\\n[Спикер 2] 00:11: \\\"с таким большим количеством способов. У\\\"\\n[Спикер 2] 00:13: \\\"него столько параметров и опций, что это\\\"\\n[Спикер 2] 00:16: \\\"достойно целого выпуска.\\\"\\n\""
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 1,
+          "delayBetweenBatches": 1000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        4800,
+        400
+      ],
+      "id": "6e8fa8e1-1292-4d9d-834f-b19f5e6ca5af",
+      "name": "Edit Dialog1",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4736,
+        624
+      ],
+      "id": "38d67871-6900-419f-9a2f-6c8a9267e324",
+      "name": "OpenAI Chat Model10",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        4992,
+        624
+      ],
+      "id": "39f7b128-dad8-4b77-a934-b9b66daef465",
+      "name": "Structured Output Parser5"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        4864,
+        624
+      ],
+      "id": "1bd4940c-6b1f-4afd-933e-b0f3207aaa80",
+      "name": "DeepSeek Chat Model5",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18ee1bf2-8f6b-497b-a369-cd630118b8d1",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3664,
+        208
+      ],
+      "id": "15e2990f-bed3-4b20-9520-bb6fbc6d49f4",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=## Транскрипция (последние 6000 символов): \n\n{{ $json.readable_text }}\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Проанализируй транскрипцию и определи, это монолог одного человека или диалог/беседа нескольких людей. \n\n## ПРИЗНАКИ ДИАЛОГА: \n\n* Смена стиля речи \n\n* Вопросы и ответы между разными голосами \n\n* Обращения (\"ты сказал\", \"как ты думаешь\") \n\n* Явная смена тем/мнений  \n\n## ПРИЗНАКИ МОНОЛОГА: \n\n* Единый стиль изложения \n\n* Последовательное объяснение \n\n* Автор говорит от первого лица без собеседников  \n\nВерни СТРОГО в формате JSON БЕЗ markdown блоков, дополнительных полей и дополнительного текста:\n{\n  \"content_type\": \"monologue\" или \"dialogue\",\n  \"speakers_count\": число,\n  \"confidence\": \"high/medium/low\",\n  \"reasoning\": \"объяснение\"\n}\n\nНЕ добавляй json или любой другой текст!\n\n❌ НЕПРАВИЛЬНО:\n{\"text\": \"{\\\"content_type\\\": \\\"dialogue\\\"}\"}\n{\"result\": {\"content_type\": \"dialogue\"}}\n```json\\n{\"content_type\": \"dialogue\"}\\n```\n\n✅ ПРАВИЛЬНО:\n{\"content_type\": \"dialogue\", \"speakers_count\": 2, \"confidence\": \"high\", \"reasoning\": \"...\"}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        2944,
+        224
+      ],
+      "id": "4a4b38f2-3570-4b60-856d-e721ebde4633",
+      "name": "Detect Dialogue vs Monologue",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "connections": {
+    "YouTube Transcript": {
+      "main": [
+        [
+          {
+            "node": "Format Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Msg Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Dialog": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Dialog1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Chunk Splitter": {
+      "main": [
+        [
+          {
+            "node": "Edit Dialog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sending a message about the start of work": {
+      "main": [
+        [
+          {
+            "node": "YouTube Video Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcription": {
+      "main": [
+        [
+          {
+            "node": "Send Transcription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Transcription": {
+      "main": [
+        [
+          {
+            "node": "Get Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a chat message": {
+      "main": [
+        [
+          {
+            "node": "Send an animated file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Edit Dialog",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Edit Dialog",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Check Msg Type": {
+      "main": [
+        [
+          {
+            "node": "Sending a message about the start of work",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Cmd Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Cmd Type": {
+      "main": [
+        [
+          {
+            "node": "If User Does Not Exist",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Start Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Edit Dialog",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Video Info": {
+      "main": [
+        [
+          {
+            "node": "YouTube Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Editor",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Editor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Text Chunk Splitter2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Chunk Splitter1": {
+      "main": [
+        [
+          {
+            "node": "Transcript Editor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Transcript": {
+      "main": [
+        [
+          {
+            "node": "Text Chunk Splitter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcript Editor": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Transcript Editor1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "If Monologue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Monologue": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text Chunk Splitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Chunk Splitter2": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Transcription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Count": {
+      "main": [
+        [
+          {
+            "node": "Delete a chat message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Count": {
+      "main": [
+        [
+          {
+            "node": "Update Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        []
+      ]
+    },
+    "If User Does Not Exist": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Transcript Editor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Editor1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Editor1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Transcript Editor1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Transcript Editor1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Detect Dialogue vs Monologue1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model9": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Dialog1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model10": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Edit Dialog1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser5": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Edit Dialog1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Edit Dialog1",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Detect Dialogue vs Monologue": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Detect Dialogue vs Monologue1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6493dbe0c3b5c27c71fc40be5e147c7d7c7ad1feaffec3297ffe8f9f4617da35"
+  }
+}
