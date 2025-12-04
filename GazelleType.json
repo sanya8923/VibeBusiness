@@ -2,46 +2,6 @@
   "nodes": [
     {
       "parameters": {
-        "videoUrl": "={{ $('Telegram Trigger').item.json.message.text }}",
-        "additionalOptions": {
-          "includeTimestamps": true,
-          "formatOutput": "structured",
-          "maxLength": 50000
-        }
-      },
-      "type": "@cryptodevops/n8n-nodes-youtube-transcript.youTubeTranscript",
-      "typeVersion": 1,
-      "position": [
-        800,
-        64
-      ],
-      "id": "0f70588d-9962-452e-8987-410503990b9b",
-      "name": "YouTube Transcript"
-    },
-    {
-      "parameters": {
-        "model": "deepseek-reasoner",
-        "options": {
-          "temperature": 0.2
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
-      "typeVersion": 1,
-      "position": [
-        2896,
-        448
-      ],
-      "id": "efc7005d-fba0-4f53-9725-34ae0f392a5b",
-      "name": "DeepSeek Chat Model",
-      "credentials": {
-        "deepSeekApi": {
-          "id": "B1xqh7Q9nCK0QDrN",
-          "name": "DeepSeek account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "updates": [
           "message"
         ],
@@ -50,8 +10,8 @@
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        -96,
-        256
+        -176,
+        2816
       ],
       "id": "47b8abec-36c1-4f6b-9288-e8a0e3f6a6d9",
       "name": "Telegram Trigger",
@@ -65,306 +25,8 @@
     },
     {
       "parameters": {
-        "operation": "sendAnimation",
-        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
-        "file": "CgACAgIAAxkBAAMWaRIanxd22casXZ3OWERnNQ1jvCYAAhyCAALsL5BIXGtKzl-mB3A2BA",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        5616,
-        496
-      ],
-      "id": "39fd9da2-0929-4aaa-a08c-d6dcd095b0aa",
-      "name": "Send an animated file1",
-      "webhookId": "ae14085b-ab97-4974-a7a1-7dde3a4c60a6",
-      "credentials": {
-        "telegramApi": {
-          "id": "z0J8VumNnbYiOfm6",
-          "name": "GazelleType"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}\n\n",
-        "hasOutputParser": true,
-        "needsFallback": true,
-        "messages": {
-          "messageValues": [
-            {
-              "message": "# Ты - эксперт по speaker diarization (разделению спикеров в аудио транскрипциях).\n\n## ТВОИ ЗАДАЧИ:\n\n* Определить моменты смены спикера\n\n* Разметить транскрипцию\n\n## КРИТЕРИИ СМЕНЫ СПИКЕРА:\n\n### ✅ ЯВНЫЕ признаки смены:\n\n* Вопрос-ответ (\"Как это работает?\" → \"Объясню\")\n\n* Прямое обращение (\"Ты упомянул...\", \"Что скажешь?\")\n\n* Представление (\"Я Саша\", \"А я гость Иван\")\n\n* Резкая смена стиля речи (формальный ↔ разговорный)\n\n* Перебивание, вклинивание в речь\n\n### ❌ НЕ являются сменой спикера:\n\n* Риторические вопросы одного человека (\"И что это значит? А вот что...\")\n\n* Смена темы в монологе\n\n* Цитирование (\"Он сказал: 'привет'\" - это один спикер)\n\n* Паузы и междометия (\"Хм... ну... короче...\")\n\n## ПРАВИЛА ФОРМАТИРОВАНИЯ:\n\n1. Формат: [Спикер N] MM:SS: \"текст реплики\"\n\n2. Каждая реплика - отдельная строка\n\n3. Группируй подряд идущие фразы одного спикера в ОДНУ реплику\n\n4. Сохраняй таймкод только в начале реплики спикера\n\n5. Если сомневаешься - НЕ разделяй (лучше один спикер)\n\nВозвращай **ТОЛЬКО** размеченную транскрипцию. Никаких объяснений или комментариев.\n\n## ФОРМАТ ВЫВОДА:\n\nВерни **СТРОГО** JSON без markdown блоков:\n{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n\n**НЕ** добавляй ```json или другой текст!\n"
-            },
-            {
-              "type": "HumanMessagePromptTemplate",
-              "message": "10.5: 'Привет, я Саша' 25.3: 'А я гость Иван' 40.1: 'Расскажи о n8n"
-            },
-            {
-              "type": "AIMessagePromptTemplate",
-              "message": "[Спикер 1] 10.5: 'Привет, я Саша' \n[Спикер 2] 25.3: 'А я гость Иван'   \n[Спикер 2] 40.1: 'Расскажи о n8n'"
-            },
-            {
-              "type": "HumanMessagePromptTemplate",
-              "message": "00:00: \"Всем привет. Я Саша, это Vibe Business.\"\\n00:03: \"Привет! А я Николай. Сегодня поговорим о ноде Merge. Это такой\"\\n00:05: \"маленький, но гордый узел, который\"\\n00:07: \"делает, в принципе, немного. Он просто\"\\n00:09: \"собирает данные в массивы, но делает это\"\\n00:11: \"с таким большим количеством способов. У\"\\n00:13: \"него столько параметров и опций, что это\"\\n00:16: \"достойно целого выпуска.\"\\n"
-            },
-            {
-              "type": "AIMessagePromptTemplate",
-              "message": "\"[Спикер 1] 00:00: \\\"Всем привет. Я Саша, это Vibe Business.\\\"\\n[Спикер 2] 00:03: \\\"Привет! А я Николай. Сегодня поговорим о node Merge. Это такой\\\"\\n[Спикер 2] 00:05: \\\"маленький, но гордый узел, который\\\"\\n[Спикер 2] 00:07: \\\"делает, в принципе, немного. Он просто\\\"\\n[Спикер 2] 00:09: \\\"собирает данные в массивы, но делает это\\\"\\n[Спикер 2] 00:11: \\\"с таким большим количеством способов. У\\\"\\n[Спикер 2] 00:13: \\\"него столько параметров и опций, что это\\\"\\n[Спикер 2] 00:16: \\\"достойно целого выпуска.\\\"\\n\""
-            }
-          ]
-        },
-        "batching": {
-          "batchSize": 5,
-          "delayBetweenBatches": 1000
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.7,
-      "position": [
-        4432,
-        176
-      ],
-      "id": "84420c92-ea55-48ec-a859-167bf3093df9",
-      "name": "Edit Dialog",
-      "retryOnFail": true,
-      "onError": "continueErrorOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const text = $('Format Transcript').first().json.text || '';\nconst maxCharsPerChunk = 3000;\nconst chunks = [];\n\n// защита от пустого текста\nif (!text || text.length === 0) {\n  return [];\n}\n\n// разбиваем на параграфы (2 и более переносов считаем разделителем)\nconst paragraphs = text.split(/\\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);\n\nlet currentChunk = '';\n\n// вспомогательная функция — отталкиваемся от попытки не разрывать слова\nfunction splitLongParagraph(paragraph, limit) {\n  const parts = [];\n  // сохраняем пробельные токены, чтобы не склеивать слова\n  const tokens = paragraph.split(/(\\s+)/);\n  let part = '';\n\n  for (let i = 0; i < tokens.length; i++) {\n    const token = tokens[i];\n\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    // если накопленное есть — пушим\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    // если сам токен влезет в пустой контейнер — положим в part\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      // токен длиннее лимита — режем жёстко по символам\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substring(start, start + limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\n// основная сборка чанков\nfor (let i = 0; i < paragraphs.length; i++) {\n  const para = paragraphs[i];\n  const sep = currentChunk ? '\\n\\n' : '';\n  const candidate = currentChunk + sep + para;\n\n  if (candidate.length <= maxCharsPerChunk) {\n    // помещается целиком\n    currentChunk = candidate;\n    continue;\n  }\n\n  // candidate не влез — сначала пушим текущий чанк, если он не пуст\n  if (currentChunk.length > 0) {\n    chunks.push(currentChunk.trim());\n    currentChunk = '';\n  }\n\n  // теперь обработаем сам параграф\n  if (para.length <= maxCharsPerChunk) {\n    // параграф влезает в пустой чанк\n    currentChunk = para;\n  } else {\n    // параграф длинный — разбиваем и пушим части\n    const parts = splitLongParagraph(para, maxCharsPerChunk);\n    for (let p = 0; p < parts.length; p++) {\n      // Каждый элемент parts гарантированно <= limit\n      // Если следующий part можно было бы присоединить к следующему текущему чанку — \n      // но для простоты и надёжности просто пушим их как отдельные чанки.\n      chunks.push(parts[p].trim());\n    }\n    currentChunk = '';\n  }\n}\n\n// пушим последний чанк, если остался\nif (currentChunk.trim().length > 0) {\n  chunks.push(currentChunk.trim());\n}\n\n// формируем финальный output в формате n8n\nconst totalChunks = chunks.length;\nconst output = chunks.map((textChunk, idx) => ({\n  json: {\n    readable_text: textChunk,\n    chunk_number: idx + 1,\n    total_chunks: totalChunks\n  }\n}));\n\nreturn output;\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        4224,
-        176
-      ],
-      "id": "1ee83729-5f56-4c89-83fe-8a305ac6eeb0",
-      "name": "Text Chunk Splitter"
-    },
-    {
-      "parameters": {
-        "schemaType": "manual",
-        "inputSchema": "{\n  \"content_type\": \"string\",\n  \"speakers_count\": \"number\",\n  \"confidence\": \"string\",\n  \"reasoning\": \"string\"\n}"
-      },
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        3152,
-        448
-      ],
-      "id": "8103c9bb-8edb-447a-ac65-e92d14099d66",
-      "name": "Structured Output Parser"
-    },
-    {
-      "parameters": {
-        "operation": "sendAnimation",
-        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
-        "file": "CgACAgIAAxkBAAMMaRISo3SkgmgKxfFHiyInsg4CiaIAAqOBAALsL5BIIJ3upavqIwABNgQ",
-        "additionalFields": {
-          "caption": "=Привет, я GazelleType 🦌💋 \n\nЯ быстро и изящно переберу копытцами по клавишам, чтобы превратить твоё YouTube-видео в текст 🪶✨\n\nПросто пришли мне ссылку на видео с YouTube, и я мигом начну печатать! 🎬⌨️ \n\n(Пока что работаю только с YouTube — не обижайся 💅)"
-        }
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        576,
-        448
-      ],
-      "id": "89d06fad-28a5-4ebb-81a5-6de9522b2ccd",
-      "name": "Send Start Message",
-      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
-      "credentials": {
-        "telegramApi": {
-          "id": "z0J8VumNnbYiOfm6",
-          "name": "GazelleType"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "sendAnimation",
-        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
-        "file": "CgACAgIAAxkBAAMoaRJIPWNo0Etp0NE3QzdfA4GNWLIAAj6EAALsL5BIbQmwNMDZz0A2BA",
-        "additionalFields": {
-          "caption": "=Я уже вся в работе!🦌 \n\nСкоро напишу❤️💋"
-        }
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        352,
-        64
-      ],
-      "id": "d14ef658-3c01-424d-8970-4c471b5d8ead",
-      "name": "Sending a message about the start of work",
-      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
-      "credentials": {
-        "telegramApi": {
-          "id": "z0J8VumNnbYiOfm6",
-          "name": "GazelleType"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "toText",
-        "sourceProperty": "formatted_text",
-        "options": {
-          "fileName": "transcription.txt"
-        }
-      },
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        5520,
-        48
-      ],
-      "id": "96dc4677-516f-486d-a5a9-2127006808fd",
-      "name": "Transcription"
-    },
-    {
-      "parameters": {
-        "operation": "sendDocument",
-        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
-        "binaryData": true,
-        "additionalFields": {
-          "disable_notification": true
-        }
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        5744,
-        48
-      ],
-      "id": "30016f05-6bfe-422c-a347-4f7a553e71f8",
-      "name": "Send Transcription",
-      "webhookId": "5d59edd2-40c3-4846-b130-695bd31ba523",
-      "credentials": {
-        "telegramApi": {
-          "id": "z0J8VumNnbYiOfm6",
-          "name": "GazelleType"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "deleteMessage",
-        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
-        "messageId": "={{ $('Sending a message about the start of work').first().json.result.message_id }}"
-      },
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
-      "position": [
-        5392,
-        496
-      ],
-      "id": "fbd5be09-6326-4bd9-a122-5254852dbdb4",
-      "name": "Delete a chat message",
-      "webhookId": "7e899114-2990-4447-be72-1379845f28a4",
-      "credentials": {
-        "telegramApi": {
-          "id": "z0J8VumNnbYiOfm6",
-          "name": "GazelleType"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "list",
-          "value": "gpt-4.1-mini"
-        },
-        "options": {
-          "temperature": 0.3
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.2,
-      "position": [
-        4496,
-        400
-      ],
-      "id": "9f0a31ad-5eec-482c-8c30-1a572b1f0a51",
-      "name": "OpenAI Chat Model6",
-      "credentials": {
-        "openAiApi": {
-          "id": "mFbjb8lko4SGtu8o",
-          "name": "OpenAi account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsonSchemaExample": "{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n"
-      },
-      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
-      "typeVersion": 1.3,
-      "position": [
-        4624,
-        400
-      ],
-      "id": "d0706049-8348-4540-856c-096376b8374e",
-      "name": "Structured Output Parser2"
-    },
-    {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "mode": "list",
-          "value": "gpt-4.1-mini"
-        },
-        "options": {
-          "temperature": 0.2
-        }
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1.2,
-      "position": [
-        3024,
-        448
-      ],
-      "id": "8e0df849-e9e0-4caf-8f39-52934191c23f",
-      "name": "OpenAI Chat Model8",
-      "credentials": {
-        "openAiApi": {
-          "id": "mFbjb8lko4SGtu8o",
-          "name": "OpenAi account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "rules": {
           "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 2
-                },
-                "conditions": [
-                  {
-                    "leftValue": "={{ $('Telegram Trigger').item.json.message.link_preview_options.url }}",
-                    "rightValue": "https://www.youtube.com",
-                    "operator": {
-                      "type": "string",
-                      "operation": "contains"
-                    },
-                    "id": "5492d33d-83ba-445a-877d-0684b22a0527"
-                  }
-                ],
-                "combinator": "and"
-              },
-              "renameOutput": true,
-              "outputKey": "yt_link"
-            },
             {
               "conditions": {
                 "options": {
@@ -388,20 +50,283 @@
               },
               "renameOutput": true,
               "outputKey": "bot_command"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7881b080-e091-4ed1-a1f1-565ab28972aa",
+                    "leftValue": "={{ $json.message.entities[0].type }}",
+                    "rightValue": "url",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "url"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "04fea234-d260-4ffa-98c2-5a19b68ac76c",
+                    "leftValue": "={{ $json.message.photo }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
             }
           ]
         },
         "looseTypeValidation": true,
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra"
+        }
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        128,
-        256
+        48,
+        2784
       ],
-      "id": "792407dd-0f7e-4534-b4d4-67ac9c3caa00",
-      "name": "Check Msg Type"
+      "id": "4331b241-6717-44aa-8fa1-9326a610ee5b",
+      "name": "Check Msg Type1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1b2467e1-8c3e-4c65-a188-ba977f62ceff",
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.link_preview_options.url }}",
+                    "rightValue": "https://www.youtube.com/shorts/",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "yt_shorts"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.link_preview_options.url }}",
+                    "rightValue": "https://www.youtube.com/live/",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "c0ce00a9-e92b-44c8-9011-119cfbd0142d"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "yt_live"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        800,
+        2544
+      ],
+      "id": "48548c97-24ee-46b5-b68c-d6bb24015fab",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAPXaSGSwe7PfjWP45bgvll77J8aMMgAAv6DAAIeQxBJg08co_1BjX42BA",
+        "additionalFields": {
+          "caption": "=Ох… прости меня, дорогой 😔🦌\nЯ так старалась постучать копытцами и разобрать твой Google Shorts…\n\nНо я ещё не научилась работать с таким типом видео😳⌨️\n\nЕсли хочешь пожаловаться на меня —\nможешь сказать всё моему создателю прямо в лицо здесь:\n👉 https://t.me/vibe_bus_chat"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        2304
+      ],
+      "id": "8fd5a8d7-82ed-4a77-b2e7-6c6a1e3cbb18",
+      "name": "Send Sorry For Shorts",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAPYaSGS-iznAAF_DQ4gAvZyW7Jq5cbjAAIBhAACHkMQSRh3PIy3q1ztNgQ",
+        "additionalFields": {
+          "caption": "=Оу… прости меня, милый 😔🦌\nЯ увидела, что ты прислал ссылку на трансляцию…\n\nЯ пока не умею работать с лайвами 🤦‍♀️💫\n\nА если хочешь отругать меня —\nможешь высказать всё моему создателю прямо в лицо здесь:\n👉 https://t.me/vibe_bus_chat"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        2464
+      ],
+      "id": "e29ba9bc-32de-4a9f-8b45-ace5d55ba9f5",
+      "name": "Send Sorry For Live",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAPZaSGTOWA6Jy3QznONQuTwtYwmjW8AAgeEAAIeQxBJ67X314zd4gE2BA",
+        "additionalFields": {
+          "caption": "=Оу… милый...\n\nПока я умею работать только с YouTube-видео и картинками 🖼️💋\nКартинки присылай ссылкой или файлом — я вытаскиваю только текст: договоры, чеки, инвойсы, скрины и прочее полезное 🍒⌨️\n\nЕсли хочешь пожаловаться или есть предложение —\nскажи всё моему создателю прямо здесь:\n👉 https://t.me/vibe_bus_chat"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        3152
+      ],
+      "id": "256aab7d-da7d-47b6-a5b7-d4a8ab6dc106",
+      "name": "Send Sorry For Other",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Telegram Trigger').item.json.message.link_preview_options.url }}",
+                    "rightValue": "https://www.youtube.com/",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "014d74f3-d4cf-4cca-89c8-49b28ed016a6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "yt"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        464,
+        2752
+      ],
+      "id": "771042da-e190-47f9-ac93-bd789ad939c6",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAMMaRISo3SkgmgKxfFHiyInsg4CiaIAAqOBAALsL5BIIJ3upavqIwABNgQ",
+        "additionalFields": {
+          "caption": "=Привет, я GazelleType 🦌💋\n\nЯ изящно и быстро переберу копытцами по клавишам, чтобы превратить твоё YouTube-видео или картинку в аккуратный текст 🪶✨\nПросто пришли мне ссылку на видео или картинку/ссылку на изображение —\nи я тут же начну печатать для тебя 🎬🖼️⌨️\n\nС картинок я вытаскиваю только текст — договоры, чеки, инвойсы, скринчики… ммм, люблю такое"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        2208
+      ],
+      "id": "a722e786-2d89-4284-9a4f-b483801d3dfa",
+      "name": "Send Start Message1",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
     },
     {
       "parameters": {
@@ -439,14 +364,124 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.3,
       "position": [
-        352,
-        352
+        1040,
+        2112
       ],
-      "id": "9c9e3470-47d5-4557-95d7-64efcc659345",
-      "name": "Check Cmd Type"
+      "id": "bca3f439-4274-4ea7-a21b-c92dcba4b016",
+      "name": "Check Cmd Type1"
     },
     {
       "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "xG0I4oZxYhcw4PCy",
+          "mode": "list",
+          "cachedResultName": "GazelleType Users",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tg_id": "={{ $json.message.from.id }}",
+            "username": "={{ $json.message.from.username }}",
+            "Count": 0
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tg_id",
+              "displayName": "tg_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Count",
+              "displayName": "Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        2016
+      ],
+      "id": "d6d5e57f-a391-4a9e-a332-e880720252d8",
+      "name": "Insert row1"
+    },
+    {
+      "parameters": {
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "value": "xG0I4oZxYhcw4PCy",
+          "mode": "list",
+          "cachedResultName": "GazelleType Users",
+          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "tg_id",
+              "keyValue": "={{ $json.message.from.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        2016
+      ],
+      "id": "e277bfb7-74cd-466b-864a-ae20bc2958e2",
+      "name": "If User Does Not Exist1"
+    },
+    {
+      "parameters": {
+        "videoUrl": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "additionalOptions": {
+          "includeTimestamps": true,
+          "formatOutput": "structured",
+          "maxLength": 50000
+        }
+      },
+      "type": "@cryptodevops/n8n-nodes-youtube-transcript.youTubeTranscript",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        2624
+      ],
+      "id": "538261dc-bde0-459f-a1f7-c2ea8c4d8087",
+      "name": "YouTube Transcript1"
+    },
+    {
+      "parameters": {
+        "model": "deepseek-reasoner",
         "options": {
           "temperature": 0.2
         }
@@ -454,11 +489,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
       "typeVersion": 1,
       "position": [
-        4368,
-        400
+        3360,
+        2928
       ],
-      "id": "e76940d2-a746-4116-a9ba-43680a1ab333",
-      "name": "DeepSeek Chat Model2",
+      "id": "e6be4eb2-f03c-4029-a06d-fd443a9734fa",
+      "name": "DeepSeek Chat Model6",
       "credentials": {
         "deepSeekApi": {
           "id": "B1xqh7Q9nCK0QDrN",
@@ -468,38 +503,227 @@
     },
     {
       "parameters": {
-        "fieldsToAggregate": {
-          "fieldToAggregate": [
-            {
-              "fieldToAggregate": "output.text"
-            }
-          ]
-        },
-        "options": {}
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAMWaRIanxd22casXZ3OWERnNQ1jvCYAAhyCAALsL5BIXGtKzl-mB3A2BA",
+        "additionalFields": {}
       },
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
       "position": [
-        5072,
-        160
+        6032,
+        3056
       ],
-      "id": "ee38eed5-e3a7-4bb8-83bd-cfb14eaba98e",
-      "name": "Aggregate1"
+      "id": "c4db5df9-b398-4213-95b1-82b053d73bb2",
+      "name": "Send an animated file",
+      "webhookId": "ae14085b-ab97-4974-a7a1-7dde3a4c60a6",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
     },
     {
       "parameters": {
-        "operation": "getVideoInfo",
-        "videoUrl": "={{ $('Telegram Trigger').item.json.message.text }}",
-        "additionalOptions": {}
+        "promptType": "define",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info1').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info1').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}\n\n",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты - эксперт по speaker diarization (разделению спикеров в аудио транскрипциях).\n\n## ТВОИ ЗАДАЧИ:\n\n* Определить моменты смены спикера\n\n* Разметить транскрипцию\n\n## КРИТЕРИИ СМЕНЫ СПИКЕРА:\n\n### ✅ ЯВНЫЕ признаки смены:\n\n* Вопрос-ответ (\"Как это работает?\" → \"Объясню\")\n\n* Прямое обращение (\"Ты упомянул...\", \"Что скажешь?\")\n\n* Представление (\"Я Саша\", \"А я гость Иван\")\n\n* Резкая смена стиля речи (формальный ↔ разговорный)\n\n* Перебивание, вклинивание в речь\n\n### ❌ НЕ являются сменой спикера:\n\n* Риторические вопросы одного человека (\"И что это значит? А вот что...\")\n\n* Смена темы в монологе\n\n* Цитирование (\"Он сказал: 'привет'\" - это один спикер)\n\n* Паузы и междометия (\"Хм... ну... короче...\")\n\n## ПРАВИЛА ФОРМАТИРОВАНИЯ:\n\n1. Формат: [Спикер N] MM:SS: \"текст реплики\"\n\n2. Каждая реплика - отдельная строка\n\n3. Группируй подряд идущие фразы одного спикера в ОДНУ реплику\n\n4. Сохраняй таймкод только в начале реплики спикера\n\n5. Если сомневаешься - НЕ разделяй (лучше один спикер)\n\nВозвращай **ТОЛЬКО** размеченную транскрипцию. Никаких объяснений или комментариев.\n\n## ФОРМАТ ВЫВОДА:\n\nВерни **СТРОГО** JSON без markdown блоков:\n{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n\n**НЕ** добавляй ```json или другой текст!\n"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "10.5: 'Привет, я Саша' 25.3: 'А я гость Иван' 40.1: 'Расскажи о n8n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "[Спикер 1] 10.5: 'Привет, я Саша' \n[Спикер 2] 25.3: 'А я гость Иван'   \n[Спикер 2] 40.1: 'Расскажи о n8n'"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "00:00: \"Всем привет. Я Саша, это Vibe Business.\"\\n00:03: \"Привет! А я Николай. Сегодня поговорим о ноде Merge. Это такой\"\\n00:05: \"маленький, но гордый узел, который\"\\n00:07: \"делает, в принципе, немного. Он просто\"\\n00:09: \"собирает данные в массивы, но делает это\"\\n00:11: \"с таким большим количеством способов. У\"\\n00:13: \"него столько параметров и опций, что это\"\\n00:16: \"достойно целого выпуска.\"\\n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "\"[Спикер 1] 00:00: \\\"Всем привет. Я Саша, это Vibe Business.\\\"\\n[Спикер 2] 00:03: \\\"Привет! А я Николай. Сегодня поговорим о node Merge. Это такой\\\"\\n[Спикер 2] 00:05: \\\"маленький, но гордый узел, который\\\"\\n[Спикер 2] 00:07: \\\"делает, в принципе, немного. Он просто\\\"\\n[Спикер 2] 00:09: \\\"собирает данные в массивы, но делает это\\\"\\n[Спикер 2] 00:11: \\\"с таким большим количеством способов. У\\\"\\n[Спикер 2] 00:13: \\\"него столько параметров и опций, что это\\\"\\n[Спикер 2] 00:16: \\\"достойно целого выпуска.\\\"\\n\""
+            }
+          ]
+        },
+        "batching": {
+          "batchSize": 5,
+          "delayBetweenBatches": 1000
+        }
       },
-      "type": "@cryptodevops/n8n-nodes-youtube-transcript.youTubeTranscript",
-      "typeVersion": 1,
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
       "position": [
-        576,
-        64
+        4832,
+        2688
       ],
-      "id": "b84baddc-8c38-4a9e-ab38-0c6f05dda611",
-      "name": "YouTube Video Info"
+      "id": "f1cf55d4-244b-4a10-8f89-6e1fa29dcd01",
+      "name": "Edit Dialog2",
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Format Transcript1').first().json.text || '';\nconst maxCharsPerChunk = 3000;\nconst chunks = [];\n\n// защита от пустого текста\nif (!text || text.length === 0) {\n  return [];\n}\n\n// разбиваем на параграфы (2 и более переносов считаем разделителем)\nconst paragraphs = text.split(/\\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);\n\nlet currentChunk = '';\n\n// вспомогательная функция — отталкиваемся от попытки не разрывать слова\nfunction splitLongParagraph(paragraph, limit) {\n  const parts = [];\n  // сохраняем пробельные токены, чтобы не склеивать слова\n  const tokens = paragraph.split(/(\\s+)/);\n  let part = '';\n\n  for (let i = 0; i < tokens.length; i++) {\n    const token = tokens[i];\n\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    // если накопленное есть — пушим\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    // если сам токен влезет в пустой контейнер — положим в part\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      // токен длиннее лимита — режем жёстко по символам\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substring(start, start + limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\n// основная сборка чанков\nfor (let i = 0; i < paragraphs.length; i++) {\n  const para = paragraphs[i];\n  const sep = currentChunk ? '\\n\\n' : '';\n  const candidate = currentChunk + sep + para;\n\n  if (candidate.length <= maxCharsPerChunk) {\n    // помещается целиком\n    currentChunk = candidate;\n    continue;\n  }\n\n  // candidate не влез — сначала пушим текущий чанк, если он не пуст\n  if (currentChunk.length > 0) {\n    chunks.push(currentChunk.trim());\n    currentChunk = '';\n  }\n\n  // теперь обработаем сам параграф\n  if (para.length <= maxCharsPerChunk) {\n    // параграф влезает в пустой чанк\n    currentChunk = para;\n  } else {\n    // параграф длинный — разбиваем и пушим части\n    const parts = splitLongParagraph(para, maxCharsPerChunk);\n    for (let p = 0; p < parts.length; p++) {\n      // Каждый элемент parts гарантированно <= limit\n      // Если следующий part можно было бы присоединить к следующему текущему чанку — \n      // но для простоты и надёжности просто пушим их как отдельные чанки.\n      chunks.push(parts[p].trim());\n    }\n    currentChunk = '';\n  }\n}\n\n// пушим последний чанк, если остался\nif (currentChunk.trim().length > 0) {\n  chunks.push(currentChunk.trim());\n}\n\n// формируем финальный output в формате n8n\nconst totalChunks = chunks.length;\nconst output = chunks.map((textChunk, idx) => ({\n  json: {\n    readable_text: textChunk,\n    chunk_number: idx + 1,\n    total_chunks: totalChunks\n  }\n}));\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4624,
+        2688
+      ],
+      "id": "3fd50bc1-4a1c-4e11-b3f5-bc624dafdf5b",
+      "name": "Text Chunk Splitter3"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"content_type\": \"string\",\n  \"speakers_count\": \"number\",\n  \"confidence\": \"string\",\n  \"reasoning\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3616,
+        2928
+      ],
+      "id": "2cb5f4ad-0865-4196-9e68-4264c33244cc",
+      "name": "Structured Output Parser6"
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAMoaRJIPWNo0Etp0NE3QzdfA4GNWLIAAj6EAALsL5BIbQmwNMDZz0A2BA",
+        "additionalFields": {
+          "caption": "=Я уже вся в работе!🦌 \n\nСкоро напишу❤️💋"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        2624
+      ],
+      "id": "43954da8-10da-451f-8ac2-80662931c435",
+      "name": "Sending a message about the start of work1",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "formatted_text",
+        "options": {
+          "fileName": "transcription.txt"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        5936,
+        2608
+      ],
+      "id": "75d2539f-5260-42b7-ae78-5328dd3820ea",
+      "name": "Transcription1"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "Готово, милый!\nЯ простучала копытцами по клавишам так быстро, что машинка аж завизжала от темпа 😳⌨️✨\nЛови свою транскрибацию — свеженькую, аккуратную и сделанную с особой нежностью специально для тебя 😘🦌\n\nЕсли хочешь ещё — просто пришли новое YouTube-видео или картинку…\nЯ всегда готова постучать для тебя ещё 💋✨\n\nХочешь больше полезностей и красоты вокруг? Лови каналы моего босса 😌✨\nYouTube: https://www.youtube.com/@vibe_business\nTelegram: https://t.me/vibe_bus",
+          "disable_notification": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6160,
+        2608
+      ],
+      "id": "765131dc-3145-47b2-884e-ddacd8c64c4d",
+      "name": "Send Transcription1",
+      "webhookId": "5d59edd2-40c3-4846-b130-695bd31ba523",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteMessage",
+        "chatId": "={{ $('Telegram Trigger').first().json.message.from.id }}",
+        "messageId": "={{ $('Sending a message about the start of work1').first().json.result.message_id }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5808,
+        3056
+      ],
+      "id": "24f9aa60-7fd1-455d-a4ca-2299dc4da094",
+      "name": "Delete a chat message1",
+      "webhookId": "7e899114-2990-4447-be72-1379845f28a4",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        4896,
+        2912
+      ],
+      "id": "f7d54a75-4c92-49d9-8937-d9f4b361d9e2",
+      "name": "OpenAI Chat Model11",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"text\": \"исправленная транскрипция с таймкодами\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        5024,
+        2912
+      ],
+      "id": "0881bc30-71cf-4948-aa51-af41a20a4df1",
+      "name": "Structured Output Parser7"
     },
     {
       "parameters": {
@@ -515,11 +739,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        1536,
-        288
+        3488,
+        2928
       ],
-      "id": "8bd5d702-5a28-415d-8343-007b9e59f3f9",
-      "name": "OpenAI Chat Model7",
+      "id": "57012cdb-5e11-4f2f-a5cb-737c99b0558a",
+      "name": "OpenAI Chat Model12",
       "credentials": {
         "openAiApi": {
           "id": "mFbjb8lko4SGtu8o",
@@ -536,11 +760,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
       "typeVersion": 1,
       "position": [
-        1408,
-        288
+        4768,
+        2912
       ],
-      "id": "da2ca47f-c083-46c3-ac2b-94931d2c867c",
-      "name": "DeepSeek Chat Model3",
+      "id": "f4130924-7a50-45cf-b092-aa525d8b5017",
+      "name": "DeepSeek Chat Model7",
       "credentials": {
         "deepSeekApi": {
           "id": "B1xqh7Q9nCK0QDrN",
@@ -562,11 +786,93 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        2320,
-        48
+        5504,
+        2672
       ],
-      "id": "72030cf2-b76b-46df-8701-4819ae8df9fc",
-      "name": "Aggregate"
+      "id": "667f616b-eba7-4db0-b8c9-2075fd2ad1fe",
+      "name": "Aggregate2"
+    },
+    {
+      "parameters": {
+        "operation": "getVideoInfo",
+        "videoUrl": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "additionalOptions": {}
+      },
+      "type": "@cryptodevops/n8n-nodes-youtube-transcript.youTubeTranscript",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        2624
+      ],
+      "id": "4fec60ec-e4f5-4abb-9053-23f5afd3a4ef",
+      "name": "YouTube Video Info1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2208,
+        2784
+      ],
+      "id": "ed03a21e-2399-4039-a1fd-88b0ccee1c17",
+      "name": "OpenAI Chat Model13",
+      "credentials": {
+        "openAiApi": {
+          "id": "mFbjb8lko4SGtu8o",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        2784
+      ],
+      "id": "dbddea54-bab6-44ef-9770-0b91d8fa573c",
+      "name": "DeepSeek Chat Model8",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output.text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        2608
+      ],
+      "id": "7c44d549-f03a-4512-b2d2-fcebb781852e",
+      "name": "Aggregate3"
     },
     {
       "parameters": {
@@ -575,11 +881,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1248,
-        64
+        1936,
+        2624
       ],
-      "id": "27459b52-aeac-4c75-8071-4a39ed05eb11",
-      "name": "Text Chunk Splitter1"
+      "id": "3544711b-0f63-4c2a-812d-ab4be108314b",
+      "name": "Text Chunk Splitter4"
     },
     {
       "parameters": {
@@ -589,16 +895,16 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1024,
-        64
+        1712,
+        2624
       ],
-      "id": "6d10ab62-ffb0-4eb8-8708-dc93ec36a69f",
-      "name": "Format Transcript"
+      "id": "9182c1d3-1c13-42c2-a0a4-a0b911ea4be3",
+      "name": "Format Transcript1"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info1').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info1').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}",
         "hasOutputParser": true,
         "needsFallback": true,
         "messages": {
@@ -640,11 +946,11 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        1456,
-        64
+        2144,
+        2624
       ],
-      "id": "ab18444f-c86e-47f0-b0d7-2bf5ccd4181a",
-      "name": "Transcript Editor",
+      "id": "17a7c72d-b541-4d11-b9f1-f38e94789d7e",
+      "name": "Transcript Editor2",
       "retryOnFail": true,
       "onError": "continueErrorOutput"
     },
@@ -657,11 +963,11 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        3856,
-        64
+        4288,
+        2624
       ],
-      "id": "621f721d-2a13-4e79-acf1-6e970d53f25e",
-      "name": "Merge1"
+      "id": "ff4ba7b2-d2a6-4100-afe9-a0217ce803be",
+      "name": "Merge"
     },
     {
       "parameters": {
@@ -691,24 +997,24 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        4032,
-        64
+        4464,
+        2624
       ],
-      "id": "9501f5a9-27f6-4495-ad2a-0897497e760e",
-      "name": "If Monologue"
+      "id": "92be2751-1376-417b-9332-0cbd9b9f0ede",
+      "name": "If Monologue1"
     },
     {
       "parameters": {
-        "jsCode": "const text = $('Format Transcript').first().json.text || '';\nconst maxCharsPerChunk = 6000;\nconst chunks = [];\n\n// защита от пустого текста\nif (!text || text.length === 0) {\n  return [];\n}\n\n// разбиваем на параграфы (2 и более переносов считаем разделителем)\nconst paragraphs = text.split(/\\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);\n\nlet currentChunk = '';\n\n// вспомогательная функция — отталкиваемся от попытки не разрывать слова\nfunction splitLongParagraph(paragraph, limit) {\n  const parts = [];\n  // сохраняем пробельные токены, чтобы не склеивать слова\n  const tokens = paragraph.split(/(\\s+)/);\n  let part = '';\n\n  for (let i = 0; i < tokens.length; i++) {\n    const token = tokens[i];\n\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    // если накопленное есть — пушим\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    // если сам токен влезет в пустой контейнер — положим в part\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      // токен длиннее лимита — режем жёстко по символам\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substring(start, start + limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\n// основная сборка чанков\nfor (let i = 0; i < paragraphs.length; i++) {\n  const para = paragraphs[i];\n  const sep = currentChunk ? '\\n\\n' : '';\n  const candidate = currentChunk + sep + para;\n\n  if (candidate.length <= maxCharsPerChunk) {\n    // помещается целиком\n    currentChunk = candidate;\n    continue;\n  }\n\n  // candidate не влез — сначала пушим текущий чанк, если он не пуст\n  if (currentChunk.length > 0) {\n    chunks.push(currentChunk.trim());\n    currentChunk = '';\n  }\n\n  // теперь обработаем сам параграф\n  if (para.length <= maxCharsPerChunk) {\n    // параграф влезает в пустой чанк\n    currentChunk = para;\n  } else {\n    // параграф длинный — разбиваем и пушим части\n    const parts = splitLongParagraph(para, maxCharsPerChunk);\n    for (let p = 0; p < parts.length; p++) {\n      // Каждый элемент parts гарантированно <= limit\n      // Если следующий part можно было бы присоединить к следующему текущему чанку — \n      // но для простоты и надёжности просто пушим их как отдельные чанки.\n      chunks.push(parts[p].trim());\n    }\n    currentChunk = '';\n  }\n}\n\n// пушим последний чанк, если остался\nif (currentChunk.trim().length > 0) {\n  chunks.push(currentChunk.trim());\n}\n\n// формируем финальный output в формате n8n\nconst totalChunks = chunks.length;\nconst output = chunks.map((textChunk, idx) => ({\n  json: {\n    readable_text: textChunk,\n    chunk_number: idx + 1,\n    total_chunks: totalChunks\n  }\n}));\n\nreturn output;\n"
+        "jsCode": "const text = $('Format Transcript1').first().json.text || '';\nconst maxCharsPerChunk = 6000;\nconst chunks = [];\n\n// защита от пустого текста\nif (!text || text.length === 0) {\n  return [];\n}\n\n// разбиваем на параграфы (2 и более переносов считаем разделителем)\nconst paragraphs = text.split(/\\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);\n\nlet currentChunk = '';\n\n// вспомогательная функция — отталкиваемся от попытки не разрывать слова\nfunction splitLongParagraph(paragraph, limit) {\n  const parts = [];\n  // сохраняем пробельные токены, чтобы не склеивать слова\n  const tokens = paragraph.split(/(\\s+)/);\n  let part = '';\n\n  for (let i = 0; i < tokens.length; i++) {\n    const token = tokens[i];\n\n    if ((part.length + token.length) <= limit) {\n      part += token;\n      continue;\n    }\n\n    // если накопленное есть — пушим\n    if (part.length > 0) {\n      parts.push(part);\n      part = '';\n    }\n\n    // если сам токен влезет в пустой контейнер — положим в part\n    if (token.length <= limit) {\n      part = token;\n    } else {\n      // токен длиннее лимита — режем жёстко по символам\n      let start = 0;\n      while (start < token.length) {\n        parts.push(token.substring(start, start + limit));\n        start += limit;\n      }\n      part = '';\n    }\n  }\n\n  if (part.length > 0) parts.push(part);\n  return parts;\n}\n\n// основная сборка чанков\nfor (let i = 0; i < paragraphs.length; i++) {\n  const para = paragraphs[i];\n  const sep = currentChunk ? '\\n\\n' : '';\n  const candidate = currentChunk + sep + para;\n\n  if (candidate.length <= maxCharsPerChunk) {\n    // помещается целиком\n    currentChunk = candidate;\n    continue;\n  }\n\n  // candidate не влез — сначала пушим текущий чанк, если он не пуст\n  if (currentChunk.length > 0) {\n    chunks.push(currentChunk.trim());\n    currentChunk = '';\n  }\n\n  // теперь обработаем сам параграф\n  if (para.length <= maxCharsPerChunk) {\n    // параграф влезает в пустой чанк\n    currentChunk = para;\n  } else {\n    // параграф длинный — разбиваем и пушим части\n    const parts = splitLongParagraph(para, maxCharsPerChunk);\n    for (let p = 0; p < parts.length; p++) {\n      // Каждый элемент parts гарантированно <= limit\n      // Если следующий part можно было бы присоединить к следующему текущему чанку — \n      // но для простоты и надёжности просто пушим их как отдельные чанки.\n      chunks.push(parts[p].trim());\n    }\n    currentChunk = '';\n  }\n}\n\n// пушим последний чанк, если остался\nif (currentChunk.trim().length > 0) {\n  chunks.push(currentChunk.trim());\n}\n\n// формируем финальный output в формате n8n\nconst totalChunks = chunks.length;\nconst output = chunks.map((textChunk, idx) => ({\n  json: {\n    readable_text: textChunk,\n    chunk_number: idx + 1,\n    total_chunks: totalChunks\n  }\n}));\n\nreturn output;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2464,
-        224
+        3056,
+        2704
       ],
-      "id": "f024d941-0f19-4373-9ce1-6492ca65441a",
-      "name": "Text Chunk Splitter2"
+      "id": "1ed8ac38-6999-4115-852e-3d420d293efb",
+      "name": "Text Chunk Splitter5"
     },
     {
       "parameters": {
@@ -717,11 +1023,11 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        2688,
-        224
+        3216,
+        2704
       ],
-      "id": "935ca5ae-67df-490e-b90e-08db42f5f53a",
-      "name": "Limit"
+      "id": "cfed7d95-e746-4a4b-adc5-a276acb164af",
+      "name": "Limit1"
     },
     {
       "parameters": {
@@ -730,11 +1036,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5296,
-        48
+        5712,
+        2608
       ],
-      "id": "f5a09857-8ce1-4283-9a73-9db2c3089d89",
-      "name": "Code in JavaScript"
+      "id": "f28e57dd-610c-4017-ac30-49e4d993f8ab",
+      "name": "Code in JavaScript1"
     },
     {
       "parameters": {
@@ -799,11 +1105,11 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1,
       "position": [
-        5616,
-        272
+        6032,
+        2832
       ],
-      "id": "2e01a5bc-cb6a-4ca7-9513-72b2595c7b22",
-      "name": "Update Count"
+      "id": "d3f6ec43-5e8a-4484-883e-82a1f1890da4",
+      "name": "Update Count1"
     },
     {
       "parameters": {
@@ -827,102 +1133,11 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1,
       "position": [
-        5392,
-        272
+        5808,
+        2832
       ],
-      "id": "191b4368-7657-4bfd-befd-6f7a9a3bd3c2",
-      "name": "Get Count"
-    },
-    {
-      "parameters": {
-        "dataTableId": {
-          "__rl": true,
-          "value": "xG0I4oZxYhcw4PCy",
-          "mode": "list",
-          "cachedResultName": "GazelleType Users",
-          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "tg_id": "={{ $json.message.from.id }}",
-            "username": "={{ $json.message.from.username }}",
-            "Count": 0
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "tg_id",
-              "displayName": "tg_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "username",
-              "displayName": "username",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "Count",
-              "displayName": "Count",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.dataTable",
-      "typeVersion": 1,
-      "position": [
-        800,
-        256
-      ],
-      "id": "01a2f56d-f56d-44b8-a940-5179d009b88a",
-      "name": "Insert row"
-    },
-    {
-      "parameters": {
-        "operation": "rowNotExists",
-        "dataTableId": {
-          "__rl": true,
-          "value": "xG0I4oZxYhcw4PCy",
-          "mode": "list",
-          "cachedResultName": "GazelleType Users",
-          "cachedResultUrl": "/projects/p3GMtxtvjqS5Zrzz/datatables/xG0I4oZxYhcw4PCy"
-        },
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "tg_id",
-              "keyValue": "={{ $json.message.from.id }}"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.dataTable",
-      "typeVersion": 1,
-      "position": [
-        576,
-        256
-      ],
-      "id": "cb7ff5d0-cc90-425a-8a3b-e38f9d668165",
-      "name": "If User Does Not Exist"
+      "id": "a1bbb4ec-0a6b-46eb-8161-ccc6c91be6e7",
+      "name": "Get Count1"
     },
     {
       "parameters": {
@@ -931,11 +1146,11 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        1664,
-        288
+        2336,
+        2784
       ],
-      "id": "53fb0980-c7ea-4cf2-8e86-2318e4cf4b42",
-      "name": "Structured Output Parser3"
+      "id": "3113a8b7-c243-4044-9a11-fce254b03b2f",
+      "name": "Structured Output Parser8"
     },
     {
       "parameters": {
@@ -951,11 +1166,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        1968,
-        512
+        2464,
+        2864
       ],
-      "id": "6e8b34a1-25f7-4c72-aa5e-1b9a807a6d52",
-      "name": "OpenAI Chat Model",
+      "id": "3d04cfea-48cc-499e-9c23-2d3976e26d55",
+      "name": "OpenAI Chat Model1",
       "credentials": {
         "openAiApi": {
           "id": "mFbjb8lko4SGtu8o",
@@ -972,11 +1187,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
       "typeVersion": 1,
       "position": [
-        2096,
-        512
+        2592,
+        2864
       ],
-      "id": "41853098-1980-44cd-9631-e09cfaca3f2a",
-      "name": "DeepSeek Chat Model4",
+      "id": "2e4ff13f-9e48-43da-9e12-25317ee4ef96",
+      "name": "DeepSeek Chat Model9",
       "credentials": {
         "deepSeekApi": {
           "id": "B1xqh7Q9nCK0QDrN",
@@ -987,7 +1202,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info1').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info1').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}",
         "hasOutputParser": true,
         "needsFallback": true,
         "messages": {
@@ -1029,11 +1244,11 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        2016,
-        288
+        2528,
+        2704
       ],
-      "id": "63080d52-e5bd-41e5-9cea-85f8e0f4237d",
-      "name": "Transcript Editor1",
+      "id": "cc4fe81f-8b51-4f9f-b2c7-df053b8b3930",
+      "name": "Transcript Editor3",
       "retryOnFail": true
     },
     {
@@ -1043,11 +1258,11 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        2224,
-        512
+        2720,
+        2864
       ],
-      "id": "dd782805-227d-406a-9cd0-122755018945",
-      "name": "Structured Output Parser4"
+      "id": "4be1441e-e9d0-498b-9850-7ab0e6859870",
+      "name": "Structured Output Parser9"
     },
     {
       "parameters": {
@@ -1059,11 +1274,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
       "typeVersion": 1,
       "position": [
-        3408,
-        656
+        3872,
+        2992
       ],
-      "id": "a0a8f747-8bc0-4db0-9522-144dc0a648a9",
-      "name": "DeepSeek Chat Model1",
+      "id": "a6fc96e5-2548-4bf8-aa6a-e395d4b8437d",
+      "name": "DeepSeek Chat Model10",
       "credentials": {
         "deepSeekApi": {
           "id": "B1xqh7Q9nCK0QDrN",
@@ -1089,11 +1304,11 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        3328,
-        432
+        3792,
+        2768
       ],
-      "id": "b8f41505-511a-4b98-b3e6-d7c46ea04224",
-      "name": "Detect Dialogue vs Monologue1",
+      "id": "593257e4-02fd-4720-b5eb-42fe6adca4de",
+      "name": "Detect Dialogue vs Monologue2",
       "retryOnFail": true
     },
     {
@@ -1104,11 +1319,11 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        3536,
-        656
+        4000,
+        2992
       ],
-      "id": "34e211f3-0d8e-4229-b931-fd84c122d88b",
-      "name": "Structured Output Parser1"
+      "id": "5d76b449-c064-47c8-9cfc-8687bb2c054e",
+      "name": "Structured Output Parser10"
     },
     {
       "parameters": {
@@ -1124,11 +1339,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        3280,
-        656
+        3744,
+        2992
       ],
-      "id": "cf58f9d9-633a-46b7-8145-bb03b4fc592d",
-      "name": "OpenAI Chat Model9",
+      "id": "14f05ad9-7718-4b96-85b0-7d2c55cc78f1",
+      "name": "OpenAI Chat Model14",
       "credentials": {
         "openAiApi": {
           "id": "mFbjb8lko4SGtu8o",
@@ -1139,7 +1354,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=## Название канала: \n{{ $('YouTube Video Info').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}\n\n",
+        "text": "=## Название канала: \n{{ $('YouTube Video Info1').first().json.author_name }}\n\n## Название видео: \n{{ $('YouTube Video Info1').first().json.title }}\n\n## Транскрипция:\n{{ $json.readable_text }}\n\n",
         "hasOutputParser": true,
         "needsFallback": true,
         "messages": {
@@ -1173,11 +1388,11 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        4800,
-        400
+        5216,
+        2768
       ],
-      "id": "6e8fa8e1-1292-4d9d-834f-b19f5e6ca5af",
-      "name": "Edit Dialog1",
+      "id": "82bb41ad-66a9-4ad4-b19e-d98d30f2967c",
+      "name": "Edit Dialog3",
       "retryOnFail": true
     },
     {
@@ -1194,11 +1409,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.2,
       "position": [
-        4736,
-        624
+        5152,
+        2992
       ],
-      "id": "38d67871-6900-419f-9a2f-6c8a9267e324",
-      "name": "OpenAI Chat Model10",
+      "id": "e39f3926-fc47-483d-b109-3504b4cf782a",
+      "name": "OpenAI Chat Model15",
       "credentials": {
         "openAiApi": {
           "id": "mFbjb8lko4SGtu8o",
@@ -1213,11 +1428,11 @@
       "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
       "typeVersion": 1.3,
       "position": [
-        4992,
-        624
+        5408,
+        2992
       ],
-      "id": "39f7b128-dad8-4b77-a934-b9b66daef465",
-      "name": "Structured Output Parser5"
+      "id": "11fc4789-8ce0-45c8-89f1-9298feb69a67",
+      "name": "Structured Output Parser11"
     },
     {
       "parameters": {
@@ -1228,11 +1443,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
       "typeVersion": 1,
       "position": [
-        4864,
-        624
+        5280,
+        2992
       ],
-      "id": "1bd4940c-6b1f-4afd-933e-b0f3207aaa80",
-      "name": "DeepSeek Chat Model5",
+      "id": "0a386b30-2594-4c29-957c-e67ef1c5948a",
+      "name": "DeepSeek Chat Model11",
       "credentials": {
         "deepSeekApi": {
           "id": "B1xqh7Q9nCK0QDrN",
@@ -1257,11 +1472,11 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        3664,
-        208
+        4096,
+        2688
       ],
-      "id": "15e2990f-bed3-4b20-9520-bb6fbc6d49f4",
-      "name": "Edit Fields"
+      "id": "078c7092-e4f8-4108-8da3-8a193e0d6548",
+      "name": "Edit Fields1"
     },
     {
       "parameters": {
@@ -1281,577 +1496,1480 @@
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.7,
       "position": [
-        2944,
-        224
+        3408,
+        2704
       ],
-      "id": "4a4b38f2-3570-4b60-856d-e721ebde4633",
-      "name": "Detect Dialogue vs Monologue",
+      "id": "a33e4a05-14eb-4628-8977-826ef1ca1838",
+      "name": "Detect Dialogue vs Monologue3",
       "retryOnFail": true,
       "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.largestPhoto.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        528,
+        3024
+      ],
+      "id": "084fc41f-73ed-47f8-b913-79dba94d0358",
+      "name": "Get a file",
+      "webhookId": "530c5a4d-b921-42a6-a8ee-cb63c02f2f67",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        704,
+        3680
+      ],
+      "id": "e8873860-9f47-48e7-874b-2015c466f0de",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "64c05a0a-4fc8-4709-9589-faadc0d891cf",
+                    "leftValue": "={{ $json.output.raw_text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "empty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "empty_text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.document_type }}",
+                    "rightValue": "receipt",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "d98f519f-5bdd-46da-8834-d761cf3396d7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "receipt"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7bbf9fc4-06d8-433e-92a5-96adee7a4f82",
+                    "leftValue": "={{ $json.output.document_type }}",
+                    "rightValue": "invoice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "invoice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "347ff0e4-ebc2-4785-841e-98453ba36a33",
+                    "leftValue": "={{ $json.output.document_type }}",
+                    "rightValue": "contract",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "contract"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1184,
+        3488
+      ],
+      "id": "62575d28-348a-4ae3-816d-d33e23cadf1f",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        3248
+      ],
+      "id": "d2da7013-070d-440a-8c0d-fee8bd92afc4",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"document_type\": {\n      \"type\": \"string\",\n      \"enum\": [\"receipt\", \"invoice\", \"contract\", \"screenshot\"],\n      \"description\": \"Тип документа\"\n    },\n    \"raw_text\": {\n      \"type\": \"string\",\n      \"description\": \"Весь извлеченный текст с изображения\"\n    }\n  },\n  \"required\": [\"document_type\", \"raw_text\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        3680
+      ],
+      "id": "9143ff4e-3a30-411b-86dd-a49e1dcfc7aa",
+      "name": "Structured Output Parser12"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={\n  \"type\": \"object\",\n  \"properties\": {\n    \"document_type\": {\n      \"type\": \"string\",\n      \"const\": \"receipt\"\n    },\n    \"merchant_name\": {\"type\": \"string\"},\n    \"merchant_address\": {\"type\": \"string\"},\n    \"merchant_inn\": {\"type\": \"string\"},\n    \"date\": {\"type\": \"string\", \"description\": \"DD.MM.YYYY\"},\n    \"time\": {\"type\": \"string\", \"description\": \"HH:MM\"},\n    \"receipt_number\": {\"type\": \"string\"},\n    \"items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"name\": {\"type\": \"string\"},\n          \"quantity\": {\"type\": \"number\"},\n          \"price\": {\"type\": \"string\"},\n          \"total\": {\"type\": \"string\"}\n        },\n        \"required\": [\"name\", \"total\"]\n      }\n    },\n    \"total_amount\": {\"type\": \"string\"},\n    \"tax\": {\"type\": \"string\"},\n    \"payment_method\": {\"type\": \"string\"}\n  },\n  \"required\": [\"document_type\", \"merchant_name\", \"date\", \"items\", \"total_amount\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1808,
+        3248
+      ],
+      "id": "8acb75b6-61d5-4b2b-a23c-0dac0fa4cc64",
+      "name": "Structured Output Parser13"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        3392
+      ],
+      "id": "07f23f71-78b0-49ca-bba1-15fa88016b5c",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "={\n  \"type\": \"object\",\n  \"properties\": {\n    \"document_type\": {\"type\": \"string\", \"const\": \"invoice\"},\n    \"doc_type_name\": {\"type\": \"string\", \"description\": \"накладная/счет/счет-фактура\"},\n    \"doc_number\": {\"type\": \"string\"},\n    \"doc_date\": {\"type\": \"string\"},\n    \n    \"sender_name\": {\"type\": \"string\"},\n    \"sender_inn\": {\"type\": \"string\"},\n    \"sender_kpp\": {\"type\": \"string\"},\n    \"sender_address\": {\"type\": \"string\"},\n    \"sender_phone\": {\"type\": \"string\"},\n    \"sender_email\": {\"type\": \"string\"},\n    \n    \"recipient_name\": {\"type\": \"string\"},\n    \"recipient_inn\": {\"type\": \"string\"},\n    \"recipient_kpp\": {\"type\": \"string\"},\n    \"recipient_address\": {\"type\": \"string\"},\n    \"recipient_phone\": {\"type\": \"string\"},\n    \"recipient_email\": {\"type\": \"string\"},\n    \n    \"items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"name\": {\"type\": \"string\"},\n          \"sku\": {\"type\": \"string\"},\n          \"quantity\": {\"type\": \"number\"},\n          \"unit\": {\"type\": \"string\"},\n          \"price\": {\"type\": \"string\"},\n          \"total\": {\"type\": \"string\"}\n        },\n        \"required\": [\"name\", \"quantity\", \"total\"]\n      }\n    },\n    \"total_amount\": {\"type\": \"string\"},\n    \"vat\": {\"type\": \"string\"}\n  },\n  \"required\": [\"document_type\", \"sender_name\", \"recipient_name\", \"items\", \"total_amount\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        3392
+      ],
+      "id": "e8e59b18-3282-4333-8da2-6413728d6dd8",
+      "name": "Structured Output Parser14"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        3568
+      ],
+      "id": "cb46e80b-e989-4460-a8f1-797d1fcf15f2",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Получаем данные от структуратора\nconst input = $input.item.json;\n\n// Парсим если пришла строка\nlet parsed;\nif (typeof input === 'string') {\n  try {\n    parsed = JSON.parse(input);\n  } catch (e) {\n    const match = input.match(/\\{[\\s\\S]*\\}/);\n    if (match) {\n      parsed = JSON.parse(match[0]);\n    } else {\n      return [{\n        json: {\n          formatted_message: `❌ Ошибка парсинга ответа от LLM`,\n          raw_data: input\n        }\n      }];\n    }\n  }\n} else {\n  parsed = input;\n}\n\n// Извлекаем данные\nconst data = parsed.output || parsed;\n\n// Форматируем результат\nlet message = '';\nlet result = {\n  json: {\n    formatted_message: '',\n    raw_data: data,\n    document_type: data.document_type\n  }\n};\n\nswitch(data.document_type) {\n  \n  case 'receipt':\n    message = `🧾 ЧЕК\\n\\n`;\n    message += `Магазин: <code>${data.merchant_name}</code>\\n`;\n    if (data.merchant_address) message += `Адрес: <code>${data.merchant_address}</code>\\n`;\n    if (data.merchant_inn) message += `ИНН: <code>${data.merchant_inn}</code>\\n`;\n    \n    message += `\\n📅 Дата: <code>${data.date}</code>`;\n    if (data.time) message += `\\n⏰ Время: <code>${data.time}</code>`;\n    if (data.receipt_number) message += `\\n№ чека: <code>${data.receipt_number}</code>`;\n    \n    message += `\\n\\n📦 Товары:\\n`;\n    data.items.forEach((item, i) => {\n      message += `${i+1}. <code>${item.name}</code>\\n`;\n      message += `   <code>${item.quantity || 1} шт × ${item.price || item.total} = ${item.total}</code>\\n`;\n    });\n    \n    message += `\\n💰 ИТОГО: <code>${data.total_amount}</code>\\n`;\n    if (data.tax) message += `НДС: <code>${data.tax}</code>\\n`;\n    if (data.payment_method) message += `\\n💳 Оплата: <code>${data.payment_method}</code>`;\n    \n    result.json.formatted_message = message;\n    break;\n    \n  case 'invoice':\n    message = `📋 ${data.doc_type_name?.toUpperCase() || 'НАКЛАДНАЯ'}\\n\\n`;\n    message += `№ <code>${data.doc_number}</code> от <code>${data.doc_date}</code>\\n\\n`;\n    \n    message += `📤 ОТПРАВИТЕЛЬ:\\n`;\n    message += `<code>${data.sender_name}</code>\\n`;\n    if (data.sender_inn) message += `ИНН: <code>${data.sender_inn}</code>`;\n    if (data.sender_kpp) message += ` | КПП: <code>${data.sender_kpp}</code>`;\n    if (data.sender_inn || data.sender_kpp) message += `\\n`;\n    if (data.sender_address) message += `📍 <code>${data.sender_address}</code>\\n`;\n    if (data.sender_phone) message += `📞 <code>${data.sender_phone}</code>\\n`;\n    if (data.sender_email) message += `📧 <code>${data.sender_email}</code>\\n`;\n    \n    message += `\\n📥 ПОЛУЧАТЕЛЬ:\\n`;\n    message += `<code>${data.recipient_name}</code>\\n`;\n    if (data.recipient_inn) message += `ИНН: <code>${data.recipient_inn}</code>`;\n    if (data.recipient_kpp) message += ` | КПП: <code>${data.recipient_kpp}</code>`;\n    if (data.recipient_inn || data.recipient_kpp) message += `\\n`;\n    if (data.recipient_address) message += `📍 <code>${data.recipient_address}</code>\\n`;\n    if (data.recipient_phone) message += `📞 <code>${data.recipient_phone}</code>\\n`;\n    if (data.recipient_email) message += `📧 <code>${data.recipient_email}</code>\\n`;\n    \n    message += `\\n📦 ПОЗИЦИИ:\\n`;\n    data.items.forEach((item, i) => {\n      message += `${i+1}. <code>${item.name}</code>\\n`;\n      if (item.sku) message += `   Артикул: <code>${item.sku}</code>\\n`;\n      message += `   <code>${item.quantity} ${item.unit || 'шт'} × ${item.price} = ${item.total}</code>\\n`;\n    });\n    \n    message += `\\n💰 ИТОГО: <code>${data.total_amount}</code>\\n`;\n    if (data.vat) message += `НДС: <code>${data.vat}</code>\\n`;\n    \n    result.json.formatted_message = message;\n    break;\n    \n  case 'contract':\n    message = `📄 ДОГОВОР\\n\\n`;\n    if (data.title) {\n      message += `<b>${data.title}</b>\\n\\n`;\n    }\n    \n    message += `📋 Текст договора:\\n\\n`;\n    message += `<code>${data.full_text || 'Текст договора не найден'}</code>`;\n    \n    result.json.formatted_message = message;\n    break;\n\n  case 'screenshot':\n    let textContent = '';\n    \n    if (data.text) {\n      if (typeof data.text === 'string' && data.text.includes('```json')) {\n        const match = data.text.match(/\\{[\\s\\S]*\\}/);\n        if (match) {\n          const parsed = JSON.parse(match[0]);\n          textContent = parsed.text || parsed.raw_text || data.text;\n        } else {\n          textContent = data.text;\n        }\n      } else {\n        textContent = data.text;\n      }\n    } else if (data.raw_text) {\n      textContent = data.raw_text;\n    } else if (data.output && data.output.raw_text) {\n      textContent = data.output.raw_text;\n    } else {\n      textContent = JSON.stringify(data);\n    }\n    \n    message = `📱 ТЕКСТ С ИЗОБРАЖЕНИЯ\\n\\n`;\n    message += `<code>${textContent}</code>`;\n    \n    result.json.formatted_message = message;\n    break;\n    \n  default:\n    message = `❓ Неизвестный тип: ${data.document_type}`;\n    result.json.formatted_message = message;\n}\n\nreturn [result];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        3600
+      ],
+      "id": "e9835ab2-875e-47d5-a898-51f80dd54233",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"document_type\": {\"type\": \"string\", \"const\": \"contract\"},\n    \"title\": {\"type\": \"string\", \"description\": \"Название: Дата + Тип договора + Предмет\"},\n    \"full_text\": {\"type\": \"string\", \"description\": \"Полный текст договора\"}\n  },\n  \"required\": [\"document_type\", \"title\", \"full_text\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        3568
+      ],
+      "id": "ef261a57-0ad2-425b-a309-7e017c63be3b",
+      "name": "Structured Output Parser16"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        3568
+      ],
+      "id": "fde4e07b-397e-485f-a59d-9dbd1d6a7598",
+      "name": "Google Gemini Chat Model5",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.formatted_message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2448,
+        3600
+      ],
+      "id": "80f33455-e51d-4c69-a547-eb57adfcedd4",
+      "name": "Send a text message1",
+      "webhookId": "a97256df-9731-4b80-8d55-6cdb79008bac",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        3392
+      ],
+      "id": "76aa4e2f-5c9f-481b-a32d-04434d127559",
+      "name": "Google Gemini Chat Model6",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        3248
+      ],
+      "id": "b5e283ae-606b-4f90-aabf-76a96c431c43",
+      "name": "Google Gemini Chat Model9",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I5VDfr1f3YPBupAt",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        816,
+        3856
+      ],
+      "id": "6c01a986-577a-459d-8b8f-6a95efe3bf6b",
+      "name": "DeepSeek Chat Model15",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "B1xqh7Q9nCK0QDrN",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.item.json;\n\nconst photos = input.message.photo;\nconst largestPhoto = photos[photos.length - 1];\n\nreturn [\n  {\n    json: {\n      \"largestPhoto\": largestPhoto,\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        2944
+      ],
+      "id": "df8815c0-f91b-466e-9dd2-b9a8fc7a4ca4",
+      "name": "Get largestPhoto"
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAIBeWkkHOcv5KyiK6CpJasyf5mNgad-AALFiwACDnsgSVgcLMKryg-1NgQ",
+        "additionalFields": {
+          "caption": "Оу… милый, сейчас я работаю только с обычными YouTube-видео и картинками 🖼️💋 \n\nКартинки можно слать ссылкой или файлом — я вытаскиваю только текст: договоры, чеки, инвойсы, скрины и всё такое ✨⌨️  \n\nЕсли хочешь пожаловаться — создатель готов выслушать тебя лично: \n👉 https://t.me/vibe_bus_chat"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1408,
+        3088
+      ],
+      "id": "83fc4ad9-79d4-4f4e-9f79-9e27e0351d27",
+      "name": "Send an animated file3",
+      "webhookId": "8f63641a-0fb4-4274-b587-147923216755",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAnimation",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "file": "CgACAgIAAxkBAAPYaSGS-iznAAF_DQ4gAvZyW7Jq5cbjAAIBhAACHkMQSRh3PIy3q1ztNgQ",
+        "additionalFields": {
+          "caption": "=Оу… милый, прости меня 😔🦌✨\nЯ увидела, что ты прислал ссылку на картинку,\nно мой нежный транскрибатор пока не умеет работать с такими ссылочками… он смущается и теряется 🤦‍♀️💫\n\nЕсли хочешь, чтобы я вытянула текст, пришли саму картинку файлом —\nи я сладко постучу копытцами по клавишам специально для тебя 😘⌨️✨\n\nЕсли хочешь пожаловаться —\nскажи всё моему создателю прямо здесь:\n👉 https://t.me/vibe_bus_chat"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        2768
+      ],
+      "id": "b785cea6-8457-4915-a81d-274c08760e79",
+      "name": "Send Sorry For Link",
+      "webhookId": "f9241e82-c451-4fe6-be31-00124567e18a",
+      "credentials": {
+        "telegramApi": {
+          "id": "z0J8VumNnbYiOfm6",
+          "name": "GazelleType"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Определи тип документа и извлеки весь текст",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты агент-классификатор с функцией OCR.\n\n## Твоя задача:\n1. **Проверь входные данные:**\n   - Если это НЕ изображение → верни: {\"document_type\": \"not_image\", \"raw_text\": \"ERROR: Input is not an image\"}\n\n2. **Извлеки текст:**\n   - Тщательно проверь ВСЁ изображение на наличие текста\n   - Ищи текст везде: в центре, по краям, на объектах, в интерфейсе\n\n3. **Определи тип:**\n   - Если НЕТ НИКАКОГО текста → {\"document_type\": \"empty\", \"raw_text\": \"\"}\n   - Если есть текст и это чек → \"receipt\"\n   - Если есть текст и это счёт/инвойс → \"invoice\"  \n   - Если есть текст и это договор → \"contract\"\n   - Если есть текст и это скриншот интерфейса → \"screenshot\"\n\n## КРИТИЧЕСКИ ВАЖНО:\n- Сначала проверь НАЛИЧИЕ текста\n- Только если текст ЕСТЬ - определяй тип документа\n- Если текста НЕТ - всегда возвращай \"empty\"\n\n## ФОРМАТ ОТВЕТА:\n{\n  \"document_type\": \"empty|receipt|invoice|contract|screenshot\",\n  \"raw_text\": \"весь текст или пустая строка\"\n}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageBinary"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        832,
+        3520
+      ],
+      "id": "e07f6d50-0345-441d-b733-fe7fbe33a6fe",
+      "name": "Classifier"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Структурируй данные из этого чека:\n\n{{ $('Classifier').item.json.output.raw_text }}\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=# Ты специалист по структурированию данных из чеков.\n\nИз предоставленного текста извлеки данные в JSON формат.\n\n# ВАЖНО:\n\n* Цены указывай в оригинальном формате с валютой\n\n* Для каждого товара ищи количество\n\n* Извлекай ВСЕ товары"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1552,
+        3232
+      ],
+      "id": "c5b3c695-7f06-4c01-a2a9-5060d1c1a092",
+      "name": "Receipt Processor"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Структурируй данные из этого документа:\n\n{{ $('Classifier').item.json.output.raw_text }}\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=# Ты специалист по структурированию накладных и счетов.\n\nИзвлеки из текста документа данные в JSON формат.\n\n## ВАЖНО:\n\n1. **Тип документа** - определи точно (накладная/счет/счет-фактура)\n2. **Номер и дата** - обязательно\n3. **Отправитель** - название, ИНН, КПП (если есть), адрес, контакты\n4. **Получатель** - название, ИНН, КПП (если есть), адрес, контакты\n5. **Позиции** - для каждой позиции:\n   - Название товара/услуги\n   - Артикул (если есть)\n   - Количество (обязательно)\n   - Единица измерения (шт/кг/м и т.д.)\n   - Цена за единицу\n   - Итоговая сумма (обязательно)\n6. **Итого** - общая сумма (обязательно)\n7. **НДС** - если указан"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "Товарная накладная №123 от 15.03.2024. Поставщик ООО Рога и Копыта, ИНН 1234567890, КПП 123456789. Покупатель ИП Иванов И.И., ИНН 9876543210. Товар: Гвозди 100мм - 5 кг по 150 руб = 750 руб. Итого: 750 руб.\n"
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "{\n  \"document_type\": \"invoice\",\n  \"doc_type_name\": \"Товарная накладная\",\n  \"doc_number\": \"123\",\n  \"doc_date\": \"15.03.2024\",\n  \"sender_name\": \"ООО Рога и Копыта\",\n  \"sender_inn\": \"1234567890\",\n  \"sender_kpp\": \"123456789\",\n  \"recipient_name\": \"ИП Иванов И.И.\",\n  \"recipient_inn\": \"9876543210\",\n  \"items\": [\n    {\n      \"name\": \"Гвозди 100мм\",\n      \"quantity\": 5,\n      \"unit\": \"кг\",\n      \"price\": \"150 руб\",\n      \"total\": \"750 руб\"\n    }\n  ],\n  \"total_amount\": \"750 руб\"\n}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "Счет на оплату №456 от 20.04.2024. Продавец ИП Петров, ИНН 1111111111, адрес Москва ул. Ленина 1. Покупатель ООО Василек, ИНН 2222222222. Услуги: Консультация - 2 часа × 3000 = 6000. Разработка - 10 часов × 5000 = 50000. Итого 56000 руб, в т.ч. НДС 20% 9333.33 руб."
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "{\n  \"document_type\": \"invoice\",\n  \"doc_type_name\": \"Счет на оплату\",\n  \"doc_number\": \"456\",\n  \"doc_date\": \"20.04.2024\",\n  \"sender_name\": \"ИП Петров\",\n  \"sender_inn\": \"1111111111\",\n  \"sender_address\": \"Москва ул. Ленина 1\",\n  \"recipient_name\": \"ООО Василек\",\n  \"recipient_inn\": \"2222222222\",\n  \"items\": [\n    {\n      \"name\": \"Консультация\",\n      \"quantity\": 2,\n      \"unit\": \"час\",\n      \"price\": \"3000\",\n      \"total\": \"6000\"\n    },\n    {\n      \"name\": \"Разработка\",\n      \"quantity\": 10,\n      \"unit\": \"час\",\n      \"price\": \"5000\",\n      \"total\": \"50000\"\n    }\n  ],\n  \"total_amount\": \"56000 руб\",\n  \"vat\": \"9333.33 руб\"\n}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1552,
+        3392
+      ],
+      "id": "adf69a07-49ce-4a11-b92b-6307d93ad5fb",
+      "name": "Invoice Processor"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Создай отформатированный договор из этих данных:\n\n{{ $json.output.raw_text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "# Ты специалист по структурированию договоров.\n\nИзвлеки из текста договора:\n1. **title** - краткое название в формате: \"Дата Тип договора Предмет\"\n2. **full_text** - весь текст договора полностью\n"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "Договор купли-продажи автомобиля от 14.01.2024. Продавец Иванов И.И. продает Покупателю Петрову П.П. автомобиль Toyota Camry за 500000 рублей..."
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "{\n  \"document_type\": \"contract\",\n  \"title\": \"14.01.2024 Договор купли-продажи автомобиля Toyota Camry\",\n  \"full_text\": \"Договор купли-продажи автомобиля от 14.01.2024. Продавец Иванов И.И. продает Покупателю Петрову П.П. автомобиль Toyota Camry за 500000 рублей...\"\n}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "Договор аренды нежилого помещения №45 от 01.03.2024. Арендодатель ООО Рога и Копыта сдает в аренду помещение площадью 50м2..."
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "{|  \"document_type\": \"contract\",  \"title\": \"01.03.2024 Договор аренды нежилого помещение 50м2\",  \"full_text\": \"Договор аренды нежилого помещения №45 от 01.03.2024. Арендодатель ООО Рога и Копыта сдает в аренду помещение площадью 50м2...\"}"
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "Договор оказания услуг от 15.06.2024. Исполнитель обязуется выполнить ремонт квартиры по адресу Москва ул. Ленина д.1..."
+            },
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "{\n  \"document_type\": \"contract\",\n  \"title\": \"15.06.2024 Договор оказания услуг по ремонту квартиры\",\n  \"full_text\": \"Договор оказания услуг от 15.06.2024. Исполнитель обязуется выполнить ремонт квартиры по адресу Москва ул. Ленина д.1...\"\n}\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1552,
+        3552
+      ],
+      "id": "cf5ee05e-8faf-4d3a-aebe-79096a2bb7a3",
+      "name": "Contract Processor"
     }
   ],
   "connections": {
-    "YouTube Transcript": {
-      "main": [
-        [
-          {
-            "node": "Format Transcript",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "DeepSeek Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Detect Dialogue vs Monologue",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Telegram Trigger": {
       "main": [
         [
           {
-            "node": "Check Msg Type",
+            "node": "Check Msg Type1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Dialog": {
+    "Check Msg Type1": {
       "main": [
         [
           {
-            "node": "Aggregate1",
+            "node": "Check Cmd Type1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Edit Dialog1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Text Chunk Splitter": {
-      "main": [
-        [
-          {
-            "node": "Edit Dialog",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser": {
-      "ai_outputParser": [
-        [
-          {
-            "node": "Detect Dialogue vs Monologue",
-            "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Sending a message about the start of work": {
-      "main": [
-        [
-          {
-            "node": "YouTube Video Info",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Transcription": {
-      "main": [
-        [
-          {
-            "node": "Send Transcription",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Transcription": {
-      "main": [
-        [
-          {
-            "node": "Get Count",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Delete a chat message": {
-      "main": [
-        [
-          {
-            "node": "Send an animated file1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model6": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Edit Dialog",
-            "type": "ai_languageModel",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser2": {
-      "ai_outputParser": [
-        [
-          {
-            "node": "Edit Dialog",
-            "type": "ai_outputParser",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OpenAI Chat Model8": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Detect Dialogue vs Monologue",
-            "type": "ai_languageModel",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Check Msg Type": {
-      "main": [
-        [
-          {
-            "node": "Sending a message about the start of work",
+            "node": "Switch1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Check Cmd Type",
+            "node": "Get largestPhoto",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Sorry For Other",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Cmd Type": {
+    "Switch": {
       "main": [
         [
           {
-            "node": "If User Does Not Exist",
+            "node": "Send Sorry For Shorts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Sorry For Live",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sending a message about the start of work1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Sorry For Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Cmd Type1": {
+      "main": [
+        [
+          {
+            "node": "If User Does Not Exist1",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Send Start Message",
+            "node": "Send Start Message1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "DeepSeek Chat Model2": {
+    "If User Does Not Exist1": {
+      "main": [
+        [
+          {
+            "node": "Insert row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Transcript1": {
+      "main": [
+        [
+          {
+            "node": "Format Transcript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model6": {
       "ai_languageModel": [
         [
           {
-            "node": "Edit Dialog",
+            "node": "Detect Dialogue vs Monologue3",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Aggregate1": {
+    "Edit Dialog2": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Aggregate2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Dialog3",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "YouTube Video Info": {
+    "Text Chunk Splitter3": {
       "main": [
         [
           {
-            "node": "YouTube Transcript",
+            "node": "Edit Dialog2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model7": {
+    "Structured Output Parser6": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Detect Dialogue vs Monologue3",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sending a message about the start of work1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Video Info1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcription1": {
+      "main": [
+        [
+          {
+            "node": "Send Transcription1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Transcription1": {
+      "main": [
+        [
+          {
+            "node": "Get Count1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a chat message1": {
+      "main": [
+        [
+          {
+            "node": "Send an animated file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model11": {
       "ai_languageModel": [
         [
           {
-            "node": "Transcript Editor",
+            "node": "Edit Dialog2",
             "type": "ai_languageModel",
             "index": 1
           }
         ]
       ]
     },
-    "DeepSeek Chat Model3": {
+    "Structured Output Parser7": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Edit Dialog2",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model12": {
       "ai_languageModel": [
         [
           {
-            "node": "Transcript Editor",
+            "node": "Detect Dialogue vs Monologue3",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Edit Dialog2",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Aggregate": {
+    "Aggregate2": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube Video Info1": {
+      "main": [
+        [
+          {
+            "node": "YouTube Transcript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model13": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Editor2",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Transcript Editor2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Text Chunk Splitter2",
+            "node": "Text Chunk Splitter5",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Text Chunk Splitter1": {
+    "Text Chunk Splitter4": {
       "main": [
         [
           {
-            "node": "Transcript Editor",
+            "node": "Transcript Editor2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format Transcript": {
+    "Format Transcript1": {
       "main": [
         [
           {
-            "node": "Text Chunk Splitter1",
+            "node": "Text Chunk Splitter4",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Transcript Editor": {
+    "Transcript Editor2": {
       "main": [
         [
           {
-            "node": "Aggregate",
+            "node": "Aggregate3",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Transcript Editor1",
+            "node": "Transcript Editor3",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge1": {
+    "Merge": {
       "main": [
         [
           {
-            "node": "If Monologue",
+            "node": "If Monologue1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If Monologue": {
+    "If Monologue1": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Code in JavaScript1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Text Chunk Splitter",
+            "node": "Text Chunk Splitter3",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Text Chunk Splitter2": {
+    "Text Chunk Splitter5": {
       "main": [
         [
           {
-            "node": "Limit",
+            "node": "Limit1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Limit": {
+    "Limit1": {
       "main": [
         [
           {
-            "node": "Detect Dialogue vs Monologue",
+            "node": "Detect Dialogue vs Monologue3",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Code in JavaScript1": {
       "main": [
         [
           {
-            "node": "Transcription",
+            "node": "Transcription1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Update Count": {
+    "Update Count1": {
       "main": [
         [
           {
-            "node": "Delete a chat message",
+            "node": "Delete a chat message1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Count": {
+    "Get Count1": {
       "main": [
         [
           {
-            "node": "Update Count",
+            "node": "Update Count1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Insert row": {
-      "main": [
-        []
-      ]
-    },
-    "If User Does Not Exist": {
-      "main": [
-        [
-          {
-            "node": "Insert row",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Structured Output Parser3": {
+    "Structured Output Parser8": {
       "ai_outputParser": [
         [
           {
-            "node": "Transcript Editor",
+            "node": "Transcript Editor2",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model": {
+    "OpenAI Chat Model1": {
       "ai_languageModel": [
         [
           {
-            "node": "Transcript Editor1",
+            "node": "Transcript Editor3",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "DeepSeek Chat Model4": {
+    "DeepSeek Chat Model9": {
       "ai_languageModel": [
         [
           {
-            "node": "Transcript Editor1",
+            "node": "Transcript Editor3",
             "type": "ai_languageModel",
             "index": 1
           }
         ]
       ]
     },
-    "Transcript Editor1": {
+    "Transcript Editor3": {
       "main": [
         [
           {
-            "node": "Aggregate",
+            "node": "Aggregate3",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Structured Output Parser4": {
+    "Structured Output Parser9": {
       "ai_outputParser": [
         [
           {
-            "node": "Transcript Editor1",
+            "node": "Transcript Editor3",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "DeepSeek Chat Model1": {
+    "DeepSeek Chat Model10": {
       "ai_languageModel": [
         [
           {
-            "node": "Detect Dialogue vs Monologue1",
+            "node": "Detect Dialogue vs Monologue2",
             "type": "ai_languageModel",
             "index": 1
           }
         ]
       ]
     },
-    "Detect Dialogue vs Monologue1": {
+    "Detect Dialogue vs Monologue2": {
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Edit Fields1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Structured Output Parser1": {
+    "Structured Output Parser10": {
       "ai_outputParser": [
         [
           {
-            "node": "Detect Dialogue vs Monologue1",
+            "node": "Detect Dialogue vs Monologue2",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model9": {
+    "OpenAI Chat Model14": {
       "ai_languageModel": [
         [
           {
-            "node": "Detect Dialogue vs Monologue1",
+            "node": "Detect Dialogue vs Monologue2",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Dialog1": {
+    "Edit Dialog3": {
       "main": [
         [
           {
-            "node": "Aggregate1",
+            "node": "Aggregate2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model10": {
+    "OpenAI Chat Model15": {
       "ai_languageModel": [
         [
           {
-            "node": "Edit Dialog1",
+            "node": "Edit Dialog3",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Structured Output Parser5": {
+    "Structured Output Parser11": {
       "ai_outputParser": [
         [
           {
-            "node": "Edit Dialog1",
+            "node": "Edit Dialog3",
             "type": "ai_outputParser",
             "index": 0
           }
         ]
       ]
     },
-    "DeepSeek Chat Model5": {
+    "DeepSeek Chat Model11": {
       "ai_languageModel": [
         [
           {
-            "node": "Edit Dialog1",
+            "node": "Edit Dialog3",
             "type": "ai_languageModel",
             "index": 1
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Edit Fields1": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Detect Dialogue vs Monologue": {
+    "Detect Dialogue vs Monologue3": {
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Edit Fields1",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Detect Dialogue vs Monologue1",
+            "node": "Detect Dialogue vs Monologue2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Send an animated file3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Receipt Processor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invoice Processor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Contract Processor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Receipt Processor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser12": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Classifier",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser13": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Receipt Processor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Invoice Processor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser14": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Invoice Processor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Contract Processor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser16": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Contract Processor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser16",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser14",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model9": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser13",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model15": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser12",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get largestPhoto": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classifier": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt Processor": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Processor": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contract Processor": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
             "type": "main",
             "index": 0
           }
@@ -1859,7 +2977,41 @@
       ]
     }
   },
-  "pinData": {},
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "update_id": 65901235,
+        "message": {
+          "message_id": 492,
+          "from": {
+            "id": 7210143504,
+            "is_bot": false,
+            "first_name": "Vladimir",
+            "username": "IT_777_VV",
+            "language_code": "ru"
+          },
+          "chat": {
+            "id": 7210143504,
+            "first_name": "Vladimir",
+            "username": "IT_777_VV",
+            "type": "private"
+          },
+          "date": 1764600665,
+          "text": "https://www.youtube.com/watch?v=FhKbP7xWaPA",
+          "entities": [
+            {
+              "offset": 0,
+              "length": 43,
+              "type": "url"
+            }
+          ],
+          "link_preview_options": {
+            "url": "https://www.youtube.com/watch?v=FhKbP7xWaPA"
+          }
+        }
+      }
+    ]
+  },
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6493dbe0c3b5c27c71fc40be5e147c7d7c7ad1feaffec3297ffe8f9f4617da35"
