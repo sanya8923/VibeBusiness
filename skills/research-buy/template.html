@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="{{LANG}}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>{{TITLE}}</title>
+<style>
+  :root {
+    --bg: #0e1015;
+    --bg-2: #161922;
+    --bg-3: #1f2330;
+    --border: #2a2f3d;
+    --text: #e6e8ee;
+    --text-2: #a8adba;
+    --text-3: #7a7f8d;
+    --accent: #ffb347;
+    --accent-2: #6dc1ff;
+    --green: #5eba7d;
+    --blue: #6dc1ff;
+    --yellow: #f5c451;
+    --purple: #c08bff;
+    --red: #ff6b6b;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif; line-height: 1.55; }
+  body { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  h1, h2, h3, h4 { color: var(--text); margin-top: 1.6em; margin-bottom: 0.4em; line-height: 1.2; }
+  h1 { font-size: 2.2em; margin-top: 0; }
+  h2 { font-size: 1.6em; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.2em; color: var(--accent); }
+  h4 { font-size: 1em; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; }
+  p { color: var(--text); }
+  small, .meta { color: var(--text-3); font-size: 0.9em; }
+  hr { border: 0; border-top: 1px solid var(--border); margin: 32px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.95em; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--text-2); font-weight: 600; background: var(--bg-2); }
+  tr:hover td { background: var(--bg-2); }
+  code { background: var(--bg-3); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--bg-2); color: var(--text-2); }
+  .header-meta { color: var(--text-3); margin-bottom: 24px; font-size: 0.95em; }
+  .header-meta strong { color: var(--text-2); }
+  .nav { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 16px 0 32px; padding: 12px 16px; background: var(--bg-2); border-radius: var(--radius); }
+  .nav a { color: var(--text-2); font-size: 0.95em; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 500; margin-right: 4px; }
+  .badge.green { background: rgba(94, 186, 125, 0.18); color: var(--green); }
+  .badge.blue { background: rgba(109, 193, 255, 0.18); color: var(--blue); }
+  .badge.yellow { background: rgba(245, 196, 81, 0.18); color: var(--yellow); }
+  .badge.purple { background: rgba(192, 139, 255, 0.18); color: var(--purple); }
+  .badge.red { background: rgba(255, 107, 107, 0.18); color: var(--red); }
+  .tldr { background: var(--bg-2); padding: 20px 24px; border-radius: var(--radius); border-left: 3px solid var(--accent); margin: 24px 0; }
+  .tldr h2 { border: 0; margin-top: 0; }
+  .setup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 16px 0; }
+  .setup-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; }
+  .setup-card h3 { margin-top: 0; }
+  .setup-card .price { font-size: 1.4em; color: var(--accent); font-weight: 600; }
+  .setup-card ul { padding-left: 18px; }
+  .setup-card .checklist { margin-top: 8px; }
+  .setup-card .checklist label { display: block; padding: 4px 0; cursor: pointer; color: var(--text-2); font-size: 0.95em; }
+  .setup-card .checklist input { margin-right: 8px; accent-color: var(--accent); }
+  .setup-card .checklist input:checked + span { text-decoration: line-through; color: var(--text-3); }
+  .video-wrap { aspect-ratio: 16/9; max-width: 720px; margin: 12px 0; border-radius: var(--radius); overflow: hidden; background: #000; }
+  .video-wrap iframe { width: 100%; height: 100%; border: 0; }
+  .video-meta { color: var(--text-3); font-size: 0.9em; margin-bottom: 4px; }
+  .video-block { margin: 24px 0; }
+  .video-block blockquote { font-size: 0.95em; }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+  .legend span { color: var(--text-2); font-size: 0.9em; }
+  .footer { color: var(--text-3); font-size: 0.85em; margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<h1>{{TITLE}}</h1>
+
+<div class="header-meta">
+  <strong>{{L_TOPIC}}:</strong> {{TOPIC}} &nbsp; · &nbsp;
+  <strong>{{L_LOCATION}}:</strong> {{LOCATION}} &nbsp; · &nbsp;
+  <strong>{{L_DATE}}:</strong> {{DATE}}
+</div>
+
+<nav class="nav">
+  <a href="#tldr">TL;DR</a>
+  <a href="#setups">{{L_SETUPS}}</a>
+  <a href="#components">{{L_COMPONENTS}}</a>
+  <a href="#shopping">{{L_SHOPPING}}</a>
+  <a href="#videos">{{L_VIDEOS}}</a>
+  <a href="#sources">{{L_SOURCES}}</a>
+</nav>
+
+<section id="brief">
+  <h2>{{L_BRIEF}}</h2>
+  {{BRIEF_HTML}}
+</section>
+
+<section id="tldr" class="tldr">
+  <h2>TL;DR</h2>
+  {{TLDR_HTML}}
+</section>
+
+<section id="setups">
+  <h2>{{L_SETUPS_FULL}}</h2>
+  {{SETUPS_HTML}}
+</section>
+
+<section id="components">
+  <h2>{{L_COMPONENTS_FULL}}</h2>
+  {{COMPONENTS_HTML}}
+</section>
+
+<section id="shopping">
+  <h2>{{L_SHOPPING_FULL}}</h2>
+  <div class="legend">
+    <span><span class="badge green">🟢</span> {{L_LEGEND_LOCAL}}</span>
+    <span><span class="badge blue">🔵</span> {{L_LEGEND_DELIVERY}}</span>
+    <span><span class="badge yellow">🟡</span> {{L_LEGEND_PICKUP}}</span>
+    <span><span class="badge purple">🟣</span> {{L_LEGEND_INTERNATIONAL}}</span>
+  </div>
+  {{SHOPPING_HTML}}
+</section>
+
+<section id="videos">
+  <h2>{{L_VIDEOS_FULL}}</h2>
+  {{VIDEOS_HTML}}
+</section>
+
+<section id="sources">
+  <h2>{{L_SOURCES_FULL}}</h2>
+  {{SOURCES_HTML}}
+</section>
+
+<div class="footer">
+  Slug: <code>{{SLUG}}</code> &nbsp; · &nbsp;
+  {{L_FOOTER_GENERATED}} <code>research-buy</code> · {{DATE}} &nbsp; · &nbsp;
+  {{L_FOOTER_LOCAL}}
+</div>
+
+<script>
+  // localStorage checkboxes for setup cards
+  const STORAGE_KEY = 'research-{{SLUG}}-checklist';
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  document.querySelectorAll('.setup-card .checklist input[type=checkbox]').forEach(cb => {
+    const id = cb.dataset.id;
+    if (id && saved[id]) cb.checked = true;
+    cb.addEventListener('change', () => {
+      const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      state[id] = cb.checked;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    });
+  });
+</script>
+
+</body>
+</html>

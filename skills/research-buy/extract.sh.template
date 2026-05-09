@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+# extract.sh — reusable YouTube metadata + frame collector for the research-buy skill.
+# Uses uvx (no Python install required) and system ffmpeg.
+#
+# Usage:
+#   ./extract.sh metadata            # only metadata + subtitles (fast)
+#   ./extract.sh frames              # partial download + frame grabs (needs ffmpeg)
+#   ./extract.sh all                 # everything
+#
+# Input:  videos.json in the current directory (shape per SKILL.md, Phase 2)
+# Output: metadata/<id>.info.json + metadata/<id>.<lang>.vtt + screenshots/<id>_<sec>.jpg
+#
+# Prerequisites:
+#   - uvx (install once via one of):
+#       curl -LsSf https://astral.sh/uv/install.sh | sh    # Linux/Mac, no admin
+#       brew install uv                                     # Mac with Homebrew
+#       pip install uv                                      # any platform with Python
+#   - ffmpeg (for frame extraction only):
+#       brew install ffmpeg / apt install ffmpeg / etc.
+
+set -euo pipefail
+
+MODE="${1:-all}"
+VIDEOS_JSON="${VIDEOS_JSON:-./videos.json}"
+META_DIR="${META_DIR:-./metadata}"
+SCREEN_DIR="${SCREEN_DIR:-./screenshots}"
+
+if [[ ! -f "$VIDEOS_JSON" ]]; then
+  echo "ERR: $VIDEOS_JSON not found. Run from a research <slug> directory." >&2
+  exit 1
+fi
+
+if ! command -v uvx >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+ERR: uvx not found. Install uv once via one of:
+  curl -LsSf https://astral.sh/uv/install.sh | sh   # no admin, Linux/Mac
+  brew install uv                                    # Mac + Homebrew
+  pip install uv                                     # any platform
+EOF
+  exit 1
+fi
+
+mkdir -p "$META_DIR" "$SCREEN_DIR"
+
+extract_metadata() {
+  local id="$1" url="$2"
+  echo "→ metadata: $id"
+  uvx yt-dlp \
+    --skip-download \
+    --write-info-json \
+    --write-auto-subs \
+    --sub-lang "en,ru" \
+    --convert-subs vtt \
+    --output "${META_DIR}/%(id)s.%(ext)s" \
+    "$url" 2>&1 | grep -E "(WARNING|ERROR|writing)" || true
+}
+
+extract_frames() {
+  local id="$1" url="$2"
+  if ! command -v ffmpeg >/dev/null 2>&1; then
+    echo "WARN: ffmpeg not found, skipping frames for $id" >&2
+    return
+  fi
+
+  # Parse frames from videos.json via python (more portable than jq on default Mac)
+  python3 -c "
+import json, sys
+data = json.load(open('${VIDEOS_JSON}'))
+for v in data:
+    if v['id'] == '${id}':
+        for f in v.get('frames', []):
+            print(f['sec'])
+" | while read -r sec; do
+    if [[ -z "$sec" ]]; then continue; fi
+
+    local out="${SCREEN_DIR}/${id}_${sec}.jpg"
+    if [[ -f "$out" ]]; then
+      echo "  ✓ frame ${sec}s already exists"
+      continue
+    fi
+
+    # Download a 2-second slice and pull the 15th frame
+    local start=$((sec - 1))
+    [[ $start -lt 0 ]] && start=0
+    local end=$((sec + 1))
+
+    echo "  → frame ${sec}s"
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    uvx yt-dlp \
+      --download-sections "*${start}-${end}" \
+      --format "best[height<=720]" \
+      --output "${tmpdir}/${id}.%(ext)s" \
+      "$url" >/dev/null 2>&1 || { echo "    skip (download failed)"; rm -rf "$tmpdir"; continue; }
+
+    local clip
+    clip=$(ls "${tmpdir}"/${id}.* 2>/dev/null | head -1)
+    if [[ -z "$clip" ]]; then
+      echo "    skip (no clip downloaded)"
+      rm -rf "$tmpdir"
+      continue
+    fi
+
+    ffmpeg -y -i "$clip" -vf "select=eq(n\,15)" -vframes 1 "$out" >/dev/null 2>&1 || \
+      echo "    skip (ffmpeg failed)"
+
+    rm -rf "$tmpdir"
+  done
+}
+
+# Iterate videos.json via python (portable)
+python3 -c "
+import json
+data = json.load(open('${VIDEOS_JSON}'))
+for v in data:
+    print(v['id'], v['url'])
+" | while read -r id url; do
+  case "$MODE" in
+    metadata) extract_metadata "$id" "$url" ;;
+    frames)   extract_frames "$id" "$url" ;;
+    all)      extract_metadata "$id" "$url"; extract_frames "$id" "$url" ;;
+    *) echo "Usage: $0 {metadata|frames|all}"; exit 1 ;;
+  esac
+done
+
+echo "✓ done. Mode: $MODE. Metadata: $(ls -1 ${META_DIR} 2>/dev/null | wc -l) files. Screenshots: $(ls -1 ${SCREEN_DIR} 2>/dev/null | wc -l) files."
