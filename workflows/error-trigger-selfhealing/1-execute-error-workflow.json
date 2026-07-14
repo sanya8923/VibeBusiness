@@ -1,0 +1,220 @@
+{
+  "name": "Execute Error Workflow (генератор ошибки)",
+  "nodes": [
+    {
+      "id": "0ba2e31f-ebf6-4693-9f4b-a5c22f275e64",
+      "name": "Каждые 15 секунд",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "26e8aa61-c09d-4723-9faf-3e76e7048c62",
+      "name": "Запрос к основному серверу",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        96
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.google.com/error-demo-nonexistent-endpoint-12345"
+      }
+    },
+    {
+      "id": "165ccf81-3664-4348-ad4e-09a5d17f01b0",
+      "name": "Сигнал: отработал",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        96
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "Основной workflow отработал ✅"
+      }
+    },
+    {
+      "id": "7578fbb7-680b-4a4b-9b33-157244e8e0cc",
+      "name": "Запуск вручную",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "id": "0ad91fbb-a6ee-4f42-991b-60e4de094633",
+      "name": "Запуск из Error Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        416
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "0a03988e-26e1-46ff-9953-996cdb938926",
+      "name": "Запрос к резервному серверу",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        416
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.github.com/zen"
+      }
+    },
+    {
+      "id": "0e556c63-080a-48dc-83d8-648ff9c86341",
+      "name": "Сигнал: взяли с резерва",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        416
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=Данные получены с резервного сервера: {{ $json.data }}"
+      }
+    },
+    {
+      "id": "s-gen-1",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -200
+      ],
+      "parameters": {
+        "content": "## 1. Генератор ошибки (демо)\n«Запрос к основному серверу» бьёт в несуществующий адрес и **падает** — это и нужно.\n\n⚠️ Чтобы падение ушло в обработчик: открой **⋯ → Settings → Error Workflow** и выбери «Error Workflow (обработка ошибок)».",
+        "height": 150,
+        "width": 780,
+        "color": 4
+      }
+    },
+    {
+      "id": "s-gen-2",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        300
+      ],
+      "parameters": {
+        "content": "## Ручной запуск бесполезен\n**Manual Trigger не активирует Error Trigger** — показано в ролике специально. Error Trigger срабатывает только при реальном падении по расписанию.",
+        "height": 150,
+        "width": 400,
+        "color": 5
+      }
+    },
+    {
+      "id": "s-gen-3",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        360,
+        300
+      ],
+      "parameters": {
+        "content": "## Резервная ветка\nВызывается из Error Workflow через **Execute Sub-workflow**.\nБерёт данные с запасного сервера (здесь — публичный `api.github.com/zen`) и шлёт уведомление в Telegram.",
+        "height": 200,
+        "width": 380,
+        "color": 6
+      }
+    }
+  ],
+  "connections": {
+    "Каждые 15 секунд": {
+      "main": [
+        [
+          {
+            "node": "Запрос к основному серверу",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запрос к основному серверу": {
+      "main": [
+        [
+          {
+            "node": "Сигнал: отработал",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запуск вручную": {
+      "main": [
+        [
+          {
+            "node": "Запрос к основному серверу",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запуск из Error Workflow": {
+      "main": [
+        [
+          {
+            "node": "Запрос к резервному серверу",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Запрос к резервному серверу": {
+      "main": [
+        [
+          {
+            "node": "Сигнал: взяли с резерва",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "pinData": {}
+}
