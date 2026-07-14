@@ -1,6 +1,6 @@
 # Обработка ошибок в n8n: Error Trigger + AI-самолечение
 
-Готовые воркфлоу к ролику **[«Все ноды n8n: Error Trigger + AI-агент для исправления ошибок»](https://www.youtube.com/watch?v=4YG7QkBXHcs)** (канал [Vibe Business](https://www.youtube.com/@vibebusiness)).
+Готовые воркфлоу к ролику **[«Все ноды n8n: Error Trigger + AI-агент для исправления ошибок»](https://www.youtube.com/watch?v=4YG7QkBXHcs)** (канал [Vibe Business](https://www.youtube.com/@vibe_business)).
 
 Показывают, как в любой сценарий добавить обработку ошибок: логировать сбой, слать алерт в Telegram, переключаться на резервный источник и даже чинить workflow автоматически через AI-агента.
 
@@ -45,4 +45,4 @@
 
 ---
 
-Вопросы и разборы — в [Telegram-канале](https://t.me/vibebusiness). Лицензия: MIT.
+Вопросы и разборы — в [Telegram-канале](https://t.me/vibe_bus), бот для связи — [@vibe_business_official_bot](https://t.me/vibe_business_official_bot). Лицензия: MIT.
