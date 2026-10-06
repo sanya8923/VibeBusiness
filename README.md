@@ -26,7 +26,7 @@
 
 ## Воркфлоу n8n
 
-Скачай JSON и импортируй в n8n: Settings → Import from file.
+Скачай JSON и импортируй в n8n: открой новый воркфлоу, в меню «…» справа вверху выбери «Import from File…» (импорт из файла). Ещё можно скопировать содержимое JSON и вставить прямо на холст через Cmd+V или Ctrl+V.
 
 | Воркфлоу | Что делает |
 |---|---|
@@ -43,6 +43,5 @@
 - [Telegram-канал @vibe_bus](https://t.me/vibe_bus) — разборы и новые подарки к каждому ролику
 - [YouTube @vibe_business](https://www.youtube.com/@vibe_business)
 - [Чат](https://t.me/vibe_bus_chat) — вопросы и обсуждения
-- [vibe-business.space](https://vibe-business.space)
 
 Лицензия — [MIT](LICENSE).
