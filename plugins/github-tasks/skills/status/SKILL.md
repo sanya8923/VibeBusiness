@@ -15,9 +15,9 @@ allowed-tools: Bash(gh issue list:*), Bash(gh issue view:*), Bash(gh pr list:*),
 
 - `gh issue list --state open --limit 200 --json number,title,labels,assignees` — открытые
   задачи с метками.
-- `gh issue list --state closed --search "closed:>=<вчера>" --json number,title` — закрытые
-  за сутки.
-- `gh pr list --state open --json number,title,headRefName,isDraft` — открытые PR.
+- `gh issue list --state closed --search "closed:>=<вчера>" --limit 200 --json number,title` —
+  закрытые за сутки (у `gh` по умолчанию только 30; упёрлись в 200 — пиши «не меньше 200»).
+- `gh pr list --state open --limit 200 --json number,title,headRefName,isDraft` — открытые PR.
 - `git worktree list` — рабочие копии задач на этом диске.
 
 ## Сверь — расхождения
