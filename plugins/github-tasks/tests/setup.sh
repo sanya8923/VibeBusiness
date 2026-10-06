@@ -31,7 +31,7 @@ done
 check "шаблон задачи положен" test -f .github/ISSUE_TEMPLATE/task.md
 check ".gitignore прячет рабочие копии" grep -qxF ".claude/worktrees/" .gitignore
 check "в README блок фильтров" grep -qF '<!-- github-tasks:filters -->' README.md
-check "ссылка «На приёмке» ведёт на фильтр по in-review" grep -qF 'label%3Ain-review' README.md
+check "ссылка «На приёмке» ведёт на фильтр по in-review" grep -qF 'label%3A%22in-review%22' README.md
 
 echo "== повторный запуск"
 before=$(cat README.md .gitignore .github/ISSUE_TEMPLATE/task.md | cksum)
@@ -48,7 +48,32 @@ gh label edit ready -R "$R" -c 123456 -d "своё описание" >/dev/null
 /bin/bash "$P/setup.sh" >/dev/null 2>&1
 check "цвет и описание существующей метки сохранены" test "$(gh label list -R "$R" --json name,color,description -q '.[] | select(.name=="ready") | .color + "|" + .description')" = "123456|своё описание"
 
+echo "== сопоставленная метка с пробелом в имени"
+git checkout -q -- . 2>/dev/null
+printf '{\n  "labels": {"blocked": "good first issue"}\n}\n' > .claude/github-tasks.json
+/bin/bash "$P/setup.sh" >/dev/null 2>&1; code=$?
+check "запуск без ошибки" test "$code" = 0
+check "ссылка «Блокеры» — метка в кавычках, запрос закодирован" grep -qF 'label%3A%22good%20first%20issue%22' README.md
+check "метка «good first issue» не задвоена" test "$(gh label list -R "$R" --limit 200 --json name -q '[.[] | select(.name | ascii_downcase == "good first issue")] | length')" = 1
+
+echo "== метка уже есть в другом регистре"
+git checkout -q -- . 2>/dev/null
+printf '{\n  "labels": {"blocked": "Blocked"}\n}\n' > .claude/github-tasks.json
+out=$(/bin/bash "$P/setup.sh" 2>&1); code=$?
+check "запуск без ошибки" test "$code" = 0
+check "метка считается существующей" grep -qF 'метка Blocked — уже есть' <<<"$out"
+
+echo "== README без закрывающего маркера не портится"
+git checkout -q -- . 2>/dev/null
+printf '# Проект\n<!-- github-tasks:filters -->\nстарое\n## Важный раздел\nтекст\n' > README.md
+before=$(cksum < README.md)
+out=$(/bin/bash "$P/setup.sh" 2>&1); code=$?
+check "скрипт отказал" test "$code" != 0
+check "README не тронут" test "$before" = "$(cksum < README.md)"
+check "понятная причина" grep -qF 'маркеры блока фильтров непарные' <<<"$out"
+
 git checkout -q -- . 2>/dev/null
 git clean -qfd .github 2>/dev/null
+git ls-files --error-unmatch .gitignore >/dev/null 2>&1 || rm -f .gitignore
 echo "итог: верно $pass, ошибок $fail"
 [ $fail = 0 ]

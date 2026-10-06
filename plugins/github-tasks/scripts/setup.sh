@@ -18,7 +18,8 @@ TEMPLATES="$(cd "$(dirname "$0")/../templates" && pwd)"
 changed=()
 
 existing=$(gh label list -R "$R" --limit 500 --json name -q '.[].name')
-has_label() { printf '%s\n' "$existing" | grep -qxF "$1"; }
+# Имена меток в GitHub не различают регистр: «Blocked» и «blocked» — одна метка.
+has_label() { printf '%s\n' "$existing" | grep -qixF "$1"; }
 mk() {  # имя цвет описание
   if has_label "$1"; then echo "метка $1 — уже есть"; else
     gh label create "$1" -R "$R" -c "$2" -d "$3" >/dev/null && echo "метка $1 — создана"; fi
@@ -44,7 +45,19 @@ if [ -f "$gi" ] && grep -qxF ".claude/worktrees/" "$gi"; then echo ".gitignore �
 
 # Блок ссылок-фильтров: вместо доски — сохранённые поиски по меткам.
 base="https://github.com/$R/issues?q="
-q() { printf '%s' "is:issue is:open $1" | sed -e 's/ /+/g' -e 's/:/%3A/g'; }
+# Запрос кодируется целиком; имена меток — в кавычках, чтобы «in progress» был одной меткой.
+urlencode() {
+  local LC_ALL=C s=$1 out="" k ch
+  for ((k = 0; k < ${#s}; k++)); do
+    ch=${s:$k:1}
+    case "$ch" in
+      [A-Za-z0-9._~-]) out="$out$ch" ;;
+      *) out="$out$(printf '%%%02X' "'$ch")" ;;
+    esac
+  done
+  printf '%s' "$out"
+}
+q() { urlencode "is:issue is:open $1"; }
 L_R=$(gt_label ready); L_P=$(gt_label in_progress); L_V=$(gt_label in_review)
 L_B=$(gt_label blocked); L_O=$(gt_label owner_decision)
 block=$(cat <<EOF
@@ -53,12 +66,12 @@ block=$(cat <<EOF
 
 Статус задачи — метка, доски нет. Сохранённые фильтры:
 
-- [На приёмке]($base$(q "label:$L_V"))
-- [Ждёт моего решения]($base$(q "label:$L_O"))
-- [Блокеры]($base$(q "label:$L_B"))
-- [В работе]($base$(q "label:$L_P"))
-- [Готово к работе]($base$(q "label:$L_R"))
-- [Черновики и задачи без статуса]($base$(q "-label:$L_R -label:$L_P -label:$L_V -label:$L_B -label:$L_O"))
+- [На приёмке]($base$(q "label:\"$L_V\""))
+- [Ждёт моего решения]($base$(q "label:\"$L_O\""))
+- [Блокеры]($base$(q "label:\"$L_B\""))
+- [В работе]($base$(q "label:\"$L_P\""))
+- [Готово к работе]($base$(q "label:\"$L_R\""))
+- [Черновики и задачи без статуса]($base$(q "-label:\"$L_R\" -label:\"$L_P\" -label:\"$L_V\" -label:\"$L_B\" -label:\"$L_O\""))
 <!-- /github-tasks:filters -->
 EOF
 )
@@ -66,7 +79,17 @@ readme="$ROOT/README.md"
 [ -f "$readme" ] || : > "$readme"
 tmp=$(mktemp); blockfile=$(mktemp)
 printf '%s\n' "$block" > "$blockfile"
-if grep -qF '<!-- github-tasks:filters -->' "$readme"; then
+open_n=$(grep -cF '<!-- github-tasks:filters -->' "$readme" || true)
+close_n=$(grep -cF '<!-- /github-tasks:filters -->' "$readme" || true)
+if [ "$open_n" != "$close_n" ] || [ "$open_n" -gt 1 ]; then
+  rm -f "$tmp" "$blockfile"
+  gt_die "в README.md маркеры блока фильтров непарные (открывающих: $open_n, закрывающих: $close_n) — поправь README вручную, файл не тронут"
+fi
+if [ "$open_n" = 1 ] && [ "$(grep -nF '<!-- github-tasks:filters -->' "$readme" | cut -d: -f1)" -gt "$(grep -nF '<!-- /github-tasks:filters -->' "$readme" | cut -d: -f1)" ]; then
+  rm -f "$tmp" "$blockfile"
+  gt_die "в README.md закрывающий маркер блока фильтров стоит раньше открывающего — поправь README вручную, файл не тронут"
+fi
+if [ "$open_n" = 1 ]; then
   # блок — из файла: awk из macOS не принимает многострочное значение в -v
   awk -v bf="$blockfile" '
     /<!-- github-tasks:filters -->/ { while ((getline l < bf) > 0) print l; skip = 1; next }
