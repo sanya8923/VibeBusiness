@@ -127,7 +127,28 @@ run block "$WT" 'sudo --user nobody git add -A'
 run block "$WT" 'env --unset FOO git add -A'
 run block "$WT" 'stdbuf --output L git push -f'
 
+echo "== перенаправления в разборщике (третья приёмка #16)"
+run block "$WT" 'git commit -m "> цитата" -a'
+run block "$WT" 'git commit -m "<тип>: описание" -a'
+run block "$WT" 'git add ">" .'
+run block "$WT" 'git commit -F - <<< "сообщение" -a'
+run block "$WT" 'git add "<" -A'
+run block "$WT" 'git commit -m ">" -a'
+run block "$WT" 'git push origin ">" --force'
+run block "$WT" 'jq . <<< "{}"
+git push --force'
+run block "$WT" 'read x <<< "$y"
+git add -A'
+run block "$WT" '2>&1 git add -A'
+run block "$WT" 'git add -A 2>/dev/null'
+run block "$WT" 'git add >/dev/null -A'
+run block "$WT" 'git checkout main &>/dev/null && git commit -m x'
+
 echo "== должны проходить"
+run allow "$WT" 'git commit -m "> цитата"'
+run allow "$WT" 'git commit -F - <<< "-a в тексте"'
+run allow "$WT" 'git log --format=">%s<" -3'
+run allow "$WT" 'git push -u origin hooktest >/dev/null 2>&1'
 run allow "$WT" 'git push -u origin hooktest 2>&1'
 run allow "$WT" 'git checkout hooktest 2>&1 && git commit -m x'
 run allow "$SB" 'git push origin --tags'
