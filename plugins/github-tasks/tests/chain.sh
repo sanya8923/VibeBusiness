@@ -58,4 +58,11 @@ step "возврат: in_progress, исправление, повторный op
 gh pr comment "$PR" -R "$R" -b "Вердикт: Принято" >/dev/null
 step "merge при вердикте «Принято»"; /bin/bash "$P/merge.sh" "$PR"; echo "код $?"
 sleep 3; echo "задача: $(lbl $N); PR: $(gh pr view $PR -R $R --json state -q .state)"
+step "история меток: двух статусов одновременно не было"
+gh api "repos/$R/issues/$N/timeline" --paginate -q '.[] | select(.event=="labeled" or .event=="unlabeled") | "\(.event) \(.label.name)"' | awk '
+  BEGIN { split("ready in-progress in-review blocked owner-decision", L, " "); for (k in L) st[L[k]] = 1 }
+  st[$2] && $1 == "labeled" { cur++; if (cur > max) max = cur }
+  st[$2] && $1 == "unlabeled" { cur-- }
+  END { print "наибольшее число меток статуса одновременно: " max; exit (max > 1) }'
+echo "код $?"
 git -C "$S/sandbox" worktree remove --force "$WT" && echo "рабочая копия убрана"

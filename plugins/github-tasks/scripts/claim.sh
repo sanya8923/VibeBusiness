@@ -46,16 +46,18 @@ first=$(gh api --paginate "repos/$R/issues/$N/comments" \
   | sort -n | head -1)
 
 if [ "$first" != "$cid" ]; then
-  gh api -X DELETE "repos/$R/issues/comments/$cid" >/dev/null || true
+  gh api -X DELETE "repos/$R/issues/comments/$cid" >/dev/null 2>&1 || true   # мог уже удалить победитель
   gt_busy "задачу #$N одновременно взяла другая сессия"
 fi
 
-gh issue edit "$N" -R "$R" --add-assignee @me --add-label "$INP" --remove-label "$READY" >/dev/null
+# сначала снять «готова», потом поставить «в работе» — двух статусов одновременно не бывает
+gh issue edit "$N" -R "$R" --remove-label "$READY" >/dev/null
+gh issue edit "$N" -R "$R" --add-assignee @me --add-label "$INP" >/dev/null
 
 # Победитель убирает все чужие заявки, включая брошенные: после захвата в задаче
 # остаётся одна заявка, и по ней видно, чья задача.
 for c in $(gh api --paginate "repos/$R/issues/$N/comments" \
     -q ".[] | select(.body | startswith(\"$MARK\")) | .id"); do
-  [ "$c" = "$cid" ] || gh api -X DELETE "repos/$R/issues/comments/$c" >/dev/null || true
+  [ "$c" = "$cid" ] || gh api -X DELETE "repos/$R/issues/comments/$c" >/dev/null 2>&1 || true
 done
 echo "задача #$N взята (сессия $SID)"
