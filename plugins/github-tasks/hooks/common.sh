@@ -50,3 +50,143 @@ hk_default_branch() {
   ref=$(git -C "$1" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null) || ref=""
   [ -n "$ref" ] && echo "${ref#origin/}" || echo main
 }
+
+# ---------------------------------------------------------------------------------------
+# Разбор путей и переменных команды — общий для guard-git.sh и guard-readonly.sh.
+# Функции опираются на переменные вызывающего хука: curdir (текущий каталог по ходу
+# команды), prevdir (прежний — для cd - и $OLDPWD), subval (значение последней
+# подстановки $(…)), VARN/VARV (переменные, присвоенные в этой команде).
+# Ограничения разбора (форма записи — нарочно необычная):
+# - всё под временной папкой из $(mktemp -d) считается вне репозиториев, подпуть и
+#   значение флага mkdir (mkdir -m 755 x) — созданными каталогами; удачность git clone
+#   не проверяется; local вне функции считается присваиванием;
+# - значение подстановки одно на простую команду — последней; в форме с двумя
+#   подстановками в одной команде (tee "$(pwd)/x" < "$(mktemp)") первая раскроется
+#   значением второй;
+# - присваивание в ветке условия или внутри ( … ) считается выполненным; unset не
+#   учитывается; cd в теле функции считается выполненным при объявлении;
+# - popd при пустом стеке возвращает к каталогу сессии (bash в этом случае остаётся на
+#   месте и печатает ошибку).
+TMPBASE=${TMPDIR:-/tmp}; TMPBASE=${TMPBASE%/}
+VARN=(); VARV=(); subval="?"; curdir=""; prevdir=""; MKDIRS=(); CLONED=()
+
+# Можно ли считать, что cd в каталог $1 (уже нормализованный) удастся: каталог есть, это
+# временная папка из $(mktemp -d) или его создаёт mkdir или git clone раньше в этой же
+# команде. Иначе
+# cd в bash не сработает и команда продолжится в прежнем каталоге.
+dir_reachable() {
+  local m tb
+  [ -d "$1" ] && return 0
+  tb=$(norm "$TMPBASE" /)
+  case "$1" in "$TMPBASE"/mktemp|"$TMPBASE"/mktemp/*|"$tb"/mktemp|"$tb"/mktemp/*) return 0 ;; esac
+  for m in ${MKDIRS[@]+"${MKDIRS[@]}"} ${CLONED[@]+"${CLONED[@]}"}; do case "$1/" in "$m"/*) return 0 ;; esac; done
+  return 1
+}
+
+# Каталог, по которому определять репозиторий и ветку для ещё не существующего $1:
+# ближайший существующий родитель (подкаталог из mkdir остаётся частью репозитория).
+# Пусто — каталог вне репозиториев: цель git clone или временная папка из mktemp -d.
+real_dir() {
+  local d=$1 m tb
+  [ -d "$d" ] && { echo "$d"; return; }
+  tb=$(norm "$TMPBASE" /)
+  case "$d" in "$TMPBASE"/mktemp|"$TMPBASE"/mktemp/*|"$tb"/mktemp|"$tb"/mktemp/*) return ;; esac
+  for m in ${CLONED[@]+"${CLONED[@]}"}; do case "$d/" in "$m"/*) return ;; esac; done
+  while [ "$d" != / ] && [ -n "$d" ] && [ ! -d "$d" ]; do d=${d%/*}; done
+  echo "${d:-/}"
+}
+
+# Значение переменной, присвоенной в этой команде, или известной ($TMPDIR, $HOME, $PWD, $OLDPWD).
+var_get() {
+  local k
+  for ((k = ${#VARN[@]} - 1; k >= 0; k--)); do [ "${VARN[$k]}" = "$1" ] && { echo "${VARV[$k]}"; return 0; }; done
+  case "$1" in
+    TMPDIR) echo "$TMPBASE"; return 0 ;;
+    HOME) echo "$HOME"; return 0 ;;
+    PWD) echo "$curdir"; return 0 ;;
+    OLDPWD) echo "$prevdir"; return 0 ;;
+  esac
+  return 1
+}
+# Значение с переменной в начале ($VAR/…, ${VAR}…, ~) — раскрыть; неизвестная → «?».
+expand_value() {
+  local p=$1 name rest v
+  case "$p" in
+    $'\004'*)   # слово начинается с подстановки $(…): её значение + хвост
+      [ "$subval" = "?" ] && { echo "?"; return; }
+      echo "$subval${p#$'\004'}" ;;
+    '$'*)
+      name=$(printf '%s' "$p" | sed -E 's/^\$\{?([A-Za-z_][A-Za-z0-9_]*).*/\1/')
+      rest=$(printf '%s' "$p" | sed -E 's/^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?//')
+      v=$(var_get "$name") || { echo "?"; return; }
+      [ "$v" = "?" ] && { echo "?"; return; }
+      echo "$v$rest" ;;
+    "~"|"~/"*) echo "$HOME${p#\~}" ;;
+    *) echo "$p" ;;
+  esac
+}
+# Чему равна подстановка $(команда): mktemp → временная папка, pwd → текущий каталог,
+# git rev-parse --show-toplevel → корень репозитория текущего каталога; иное → «?».
+subst_value() {  # слова команды
+  case "${1##*/} ${2:-}" in
+    "mktemp "*) echo "$TMPBASE/mktemp" ;;
+    "pwd "*) echo "$curdir" ;;
+    "git rev-parse")
+      # --show-toplevel даёт корень рабочей копии (в worktree — саму рабочую копию)
+      if [ "${3:-}" = --show-toplevel ]; then git -C "$curdir" rev-parse --show-toplevel 2>/dev/null || echo "?"; return; fi
+      echo "?" ;;
+    "realpath "*|"readlink "*) [ -n "${2:-}" ] && norm "$2" "$curdir" || echo "?" ;;
+    *) echo "?" ;;
+  esac
+}
+
+# Путь без «.» и «..», с раскрытием ссылок (каталогов и самого файла; на macOS /tmp — это
+# /private/tmp), переменных из этой команды, $TMPDIR, $HOME и ~. Неизвестная переменная
+# в начале пути — печатает «?» (путь неизвестен).
+norm() {
+  local p=$1 base=$2 out="" part head tail v name rest n
+  p=$(expand_value "$p"); [ "$p" = "?" ] && { echo "?"; return; }
+  case "$p" in /*) ;; *) p="$base/$p" ;; esac
+  for n in 1 2 3 4 5 6 7 8; do
+    out=""
+    local IFS=/
+    for part in $p; do
+      case "$part" in ''|.) ;; ..) out=${out%/*} ;; *) out="$out/$part" ;; esac
+    done
+    unset IFS
+    [ -n "$out" ] || out=/
+    head=$out; tail=""
+    while [ "$head" != / ] && [ ! -d "$head" ]; do
+      tail="/${head##*/}$tail"; head=${head%/*}; [ -n "$head" ] || head=/
+    done
+    head=$(cd -P "$head" 2>/dev/null && pwd) || head=/
+    [ "$head" = / ] && head=""
+    p="$head$tail"
+    # последний элемент — ссылка на файл: идём по ней
+    if [ -n "$tail" ] && [ -L "$p" ]; then
+      v=$(readlink "$p")
+      case "$v" in /*) p=$v ;; *) p="$(dirname "$p")/$v" ;; esac
+      continue
+    fi
+    break
+  done
+  echo "$p"
+}
+
+
+# Каталог, который создаст git clone: второй позиционный аргумент после URL (флаги со
+# значением пропускаются), иначе имя репозитория из URL. Печатает путь как есть.
+clone_target() {
+  local a npos=0 url="" tgt="" k=0 all=("$@")
+  while [ "$k" -lt "${#all[@]}" ]; do
+    a=${all[$k]}
+    case "$a" in
+      -b|--branch|-o|--origin|--depth|--reference|--reference-if-able|-c|--config|--template|--separate-git-dir|--filter|-j|--jobs|--shallow-since|--shallow-exclude|-u|--upload-pack|--server-option) k=$((k+2)); continue ;;
+      -*) ;;
+      *) npos=$((npos+1)); [ "$npos" = 1 ] && url=$a; [ "$npos" = 2 ] && tgt=$a ;;
+    esac
+    k=$((k+1))
+  done
+  if [ -z "$tgt" ] && [ -n "$url" ]; then tgt=${url%/}; tgt=${tgt##*/}; tgt=${tgt##*:}; tgt=${tgt%.git}; fi
+  echo "$tgt"
+}

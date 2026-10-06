@@ -9,8 +9,10 @@
 #
 # Команду разбирает tokenize.awk: кавычки, переносы строк, подоболочки, группы,
 # подстановки команд и heredoc учтены. Каталог команды — из cd/pushd, git -C и cwd хука;
-# ветка — из git switch/checkout ранее в той же команде, иначе текущая. Путь из
-# переменной ($DIR) не раскрывается — тогда проверяется каталог сессии.
+# ветка — из git switch/checkout ранее в той же команде, иначе текущая. Переменные,
+# присвоенные в этой же команде (WT=…, D=$(mktemp -d), ROOT=$(git rev-parse
+# --show-toplevel)), а также $PWD, $OLDPWD, $HOME, $TMPDIR раскрываются (common.sh);
+# неизвестная переменная — проверяется каталог сессии.
 #
 # Известные ограничения — обход требует нарочно странной записи:
 # - eval, bash -c '…', find … -exec git …, $(which git) add -A — внутрь не разбираются;
@@ -41,14 +43,6 @@ deny() {
   exit 2
 }
 
-resolve() {  # путь $1 относительно каталога $2
-  case "$1" in
-    /*) echo "$1" ;;
-    "~"*) echo "$HOME${1#\~}" ;;
-    *) echo "$2/$1" ;;
-  esac
-}
-
 # Короткая группа флагов ($1, например -vA) содержит один из символов $2?
 # Символы из $3 берут значение: всё после них — значение, а не флаги.
 short_has() {
@@ -70,7 +64,7 @@ short_takes_next() {
   return 1
 }
 
-curdir=$CWD
+curdir=$CWD; prevdir=$CWD; pstack=()
 sw_dir=""; sw_branch=""   # ветка, на которую команда переключилась раньше (switch/checkout)
 
 current_branch() {  # каталог репозитория
@@ -91,6 +85,8 @@ while IFS= read -r line; do
       continue ;;
   esac
   IFS=$'\037' read -r -a raw <<<"$line"
+  # команда внутри подстановки: запомнить, чему подстановка равна
+  if [ ${#dstack[@]} -gt 0 ]; then subval=$(subst_value ${raw[@]+"${raw[@]}"}); fi
   # Перенаправления tokenize.awk помечает \002 — это не аргументы команды, пропускаем.
   w=()
   for t in ${raw[@]+"${raw[@]}"}; do
@@ -99,6 +95,15 @@ while IFS= read -r line; do
   done
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
+  # Строка из одних присваиваний (можно после export/declare/local/readonly):
+  # запомнить переменные (WT=путь, D=$(mktemp -d) …).
+  a0=0; case "${w[0]}" in export|declare|local|readonly|typeset) a0=1 ;; esac
+  allassign=1
+  for t in "${w[@]:$a0}"; do case "$t" in [A-Za-z_]*=*) ;; -*) ;; *) allassign=0 ;; esac; done
+  if [ "$allassign" = 1 ] && [ "$n" -gt "$a0" ]; then
+    for t in "${w[@]:$a0}"; do case "$t" in -*) continue ;; esac; VARN+=("${t%%=*}"); VARV+=("$(expand_value "${t#*=}")"); done
+    continue
+  fi
   i=0
   # Служебные слова, присваивания и обёртки перед командой.
   while [ "$i" -lt "$n" ]; do
@@ -140,10 +145,25 @@ while IFS= read -r line; do
 
   case "$name" in
     cd|pushd)
-      if [ $((i+1)) -lt "$n" ]; then
-        d=$(resolve "${w[$((i+1))]}" "$curdir"); [ -d "$d" ] && curdir=$d
+      # каталог раскрываем с переменными этой команды; неизвестный — каталог сессии
+      # (осторожная сторона: проверяется основная копия)
+      if [ $((i+1)) -lt "$n" ]; then t=${w[$((i+1))]}; else t=$HOME; fi
+      [ "$t" = - ] && t=$prevdir
+      d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
+      # несуществующий каталог: cd не сработает, команда продолжится в прежнем
+      dir_reachable "$d" || continue
+      [ "$name" = pushd ] && pstack+=("$curdir")
+      prevdir=$curdir; curdir=$d
+      continue ;;
+    mkdir)
+      for t in "${w[@]:$((i+1))}"; do case "$t" in -*) ;; *) MKDIRS+=("$(norm "$t" "$curdir")") ;; esac; done
+      continue ;;
+    popd)
+      if [ ${#pstack[@]} -gt 0 ]; then
+        prevdir=$curdir; curdir=${pstack[$((${#pstack[@]}-1))]}
+        unset "pstack[$((${#pstack[@]}-1))]"; pstack=(${pstack[@]+"${pstack[@]}"})
       else
-        curdir=$HOME
+        curdir=$CWD
       fi
       continue ;;
     git) ;;
@@ -154,19 +174,26 @@ while IFS= read -r line; do
   i=$((i+1))
   while [ "$i" -lt "$n" ] && [[ "${w[$i]}" == -* ]]; do
     case "${w[$i]}" in
-      -C) d=$(resolve "${w[$((i+1))]:-.}" "$curdir"); [ -d "$d" ] && gitdir=$d; i=$((i+2)) ;;
+      -C) d=$(norm "${w[$((i+1))]:-.}" "$curdir"); [ "$d" = "?" ] && d=$CWD; gitdir=$d; i=$((i+2)) ;;
       -c|--git-dir|--work-tree|--namespace|--exec-path) i=$((i+2)) ;;
       *) i=$((i+1)) ;;
     esac
   done
   [ "$i" -lt "$n" ] || continue
   sub=${w[$i]}
+  # ещё не созданный каталог (mkdir в этой же команде) — по ближайшему родителю
+  gd=$(real_dir "$gitdir"); [ -n "$gd" ] || continue
+  gitdir=$gd
   root=$(hk_root "$gitdir")
   [ -n "$root" ] && hk_enabled "$root" || continue
   base=$(hk_base_branch "$root")
   default=$(hk_default_branch "$root")
   args=("${w[@]:$((i+1))}")
   na=${#args[@]}
+  if [ "$sub" = clone ]; then
+    t=$(clone_target ${args[@]+"${args[@]}"}); [ -n "$t" ] && CLONED+=("$(norm "$t" "$gitdir")")
+    continue
+  fi
 
   case "$sub" in
     add)

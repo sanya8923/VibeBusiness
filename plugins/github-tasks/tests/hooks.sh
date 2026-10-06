@@ -172,6 +172,34 @@ run block "$WT" '(cd /tmp && ls) && git push --force'
 run block "$WT" 'echo $(cd /tmp; pwd); git add -A'
 run allow "$WT" '(cd /tmp && git add -A)'
 
+echo "== переменные из этой же команды (#24)"
+run block "$NC" "WT=$SB; cd \"\$WT\" && git commit -m x"
+run block "$NC" "D=$SB; git -C \"\$D\" commit -m x"
+run block "$SB" 'ROOT=$(git rev-parse --show-toplevel); cd "$ROOT" && git commit -m x'
+run block "$SB" 'cd "$(git rev-parse --show-toplevel)" && git commit -m x'
+run block "$NC" "cd $WT && cd $SB && cd - && cd - && git commit -m x"
+run allow "$SB" "WT=$WT; cd \"\$WT\" && git commit -m x"
+run allow "$SB" "WT=$WT; git -C \"\$WT\" commit -m x"
+run allow "$SB" "WT=\"$WT\" && git -C \"\$WT\" add a.txt && git -C \"\$WT\" commit -m x"
+run allow "$SB" "pushd $WT >/dev/null && git commit -m x && popd"
+run block "$WT" 'cd build 2>/dev/null; git add -A'
+run block "$WT" 'cd no-such-subdir; git add -A'
+run block "$WT" 'cd no-such-subdir
+git push --force'
+run block "$SB" 'cd /nonexistent-dir; git commit -m x'
+run block "$SB" 'pushd /nonexistent; git commit -m x'
+run allow "$WT" 'cd "$(git rev-parse --show-toplevel)" && git commit -m x'
+run block "$WT" 'mkdir -p out && cd out && git add -A'
+run block "$WT" 'mkdir out && cd out && git commit -am x'
+run block "$WT" 'mkdir -p out; cd out; git push --force'
+run block "$SB" 'mkdir -p sub && cd sub && git commit -m x'
+run block "$SB" 'mkdir -p a/b && cd a/b && git commit -m x'
+run allow "$WT" 'mkdir -p out && cd out && git status'
+run allow "$SB" "git clone https://github.com/o/r.git \$(mktemp -d)/r && cd r"
+run allow "$WT" 'ROOT=$(git rev-parse --show-toplevel); git -C "$ROOT" commit -m x'
+run allow "$SB" "export WT=$WT; cd \"\$WT\" && git commit -m x"
+run allow "$SB" "D=\$(mktemp -d) && cd \"\$D\" && git init -q && git commit -m x"
+
 echo "== должны проходить"
 run allow "$WT" 'git push -u origin "$(git branch --show-current)"'
 run allow "$WT" "git commit -m \"\$(cat <<'EOF'

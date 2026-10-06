@@ -20,7 +20,8 @@
 #   - Запись в GitHub — только одна: приёмщику — комментарий в PR (так публикуется
 #     вердикт), без --edit-last/--delete-last. Разведчику — никакой.
 #
-# Это защита от случайной правки, а не от злонамеренного обхода. Известные ограничения:
+# Это защита от случайной правки, а не от злонамеренного обхода. Известные ограничения
+# (кроме общих для разбора путей — см. common.sh):
 # код внутри интерпретатора, запущенного во временной папке (python -c
 # "open('/путь/проекта/…','w')"), и пути, которые пишущая команда во временной папке
 # получает через stdin (… | xargs sed -i), хук не видит; шаблоны case (a) …) внутри
@@ -40,7 +41,6 @@ TOOL=$(printf '%s' "$INPUT" | hk_field tool_name)
 CWD=$(printf '%s' "$INPUT" | hk_field cwd)
 [ -n "$CWD" ] || CWD=$PWD
 WHO=${AGENT#github-tasks:}
-TMPBASE=${TMPDIR:-/tmp}; TMPBASE=${TMPBASE%/}
 
 deny() {
   echo "github-tasks: $WHO работает только на чтение — $1" >&2
@@ -56,81 +56,6 @@ esac
 
 CMD=$(printf '%s' "$INPUT" | hk_field tool_input.command)
 [ -n "$CMD" ] || exit 0
-
-# Переменные, которым в этой команде присвоено значение (VAR=…, VAR=$(mktemp …)).
-VARN=(); VARV=()
-var_get() {
-  local k
-  for ((k = ${#VARN[@]} - 1; k >= 0; k--)); do [ "${VARN[$k]}" = "$1" ] && { echo "${VARV[$k]}"; return 0; }; done
-  case "$1" in
-    TMPDIR) echo "$TMPBASE"; return 0 ;;
-    HOME) echo "$HOME"; return 0 ;;
-    PWD) echo "$curdir"; return 0 ;;
-    OLDPWD) echo "$prevdir"; return 0 ;;
-  esac
-  return 1
-}
-# Значение с переменной в начале ($VAR/…, ${VAR}…, ~) — раскрыть; неизвестная → «?».
-expand_value() {
-  local p=$1 name rest v
-  case "$p" in
-    $'\004'*)   # слово начинается с подстановки $(…): её значение + хвост
-      [ "$subval" = "?" ] && { echo "?"; return; }
-      echo "$subval${p#$'\004'}" ;;
-    '$'*)
-      name=$(printf '%s' "$p" | sed -E 's/^\$\{?([A-Za-z_][A-Za-z0-9_]*).*/\1/')
-      rest=$(printf '%s' "$p" | sed -E 's/^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?//')
-      v=$(var_get "$name") || { echo "?"; return; }
-      [ "$v" = "?" ] && { echo "?"; return; }
-      echo "$v$rest" ;;
-    "~"|"~/"*) echo "$HOME${p#\~}" ;;
-    *) echo "$p" ;;
-  esac
-}
-# Чему равна подстановка $(команда): mktemp → временная папка, pwd → текущий каталог,
-# git rev-parse --show-toplevel → корень репозитория текущего каталога; иное → «?».
-subst_value() {  # слова команды
-  case "${1##*/} ${2:-}" in
-    "mktemp "*) echo "$TMPBASE/mktemp" ;;
-    "pwd "*) echo "$curdir" ;;
-    "git rev-parse") [ "${3:-}" = --show-toplevel ] && { hk_root "$curdir"; return; }; echo "?" ;;
-    "realpath "*|"readlink "*) [ -n "${2:-}" ] && norm "$2" "$curdir" || echo "?" ;;
-    *) echo "?" ;;
-  esac
-}
-
-# Путь без «.» и «..», с раскрытием ссылок (каталогов и самого файла; на macOS /tmp — это
-# /private/tmp), переменных из этой команды, $TMPDIR, $HOME и ~. Неизвестная переменная
-# в начале пути — печатает «?» (путь неизвестен).
-norm() {
-  local p=$1 base=$2 out="" part head tail v name rest n
-  p=$(expand_value "$p"); [ "$p" = "?" ] && { echo "?"; return; }
-  case "$p" in /*) ;; *) p="$base/$p" ;; esac
-  for n in 1 2 3 4 5 6 7 8; do
-    out=""
-    local IFS=/
-    for part in $p; do
-      case "$part" in ''|.) ;; ..) out=${out%/*} ;; *) out="$out/$part" ;; esac
-    done
-    unset IFS
-    [ -n "$out" ] || out=/
-    head=$out; tail=""
-    while [ "$head" != / ] && [ ! -d "$head" ]; do
-      tail="/${head##*/}$tail"; head=${head%/*}; [ -n "$head" ] || head=/
-    done
-    head=$(cd -P "$head" 2>/dev/null && pwd) || head=/
-    [ "$head" = / ] && head=""
-    p="$head$tail"
-    # последний элемент — ссылка на файл: идём по ней
-    if [ -n "$tail" ] && [ -L "$p" ]; then
-      v=$(readlink "$p")
-      case "$v" in /*) p=$v ;; *) p="$(dirname "$p")/$v" ;; esac
-      continue
-    fi
-    break
-  done
-  echo "$p"
-}
 
 PROOT_RAW=$(hk_root "$CWD")
 PROOT=""
@@ -316,11 +241,14 @@ while IFS= read -r line; do
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
 
-  # Строка из одних присваиваний: запомнить переменные (VAR=$(mktemp …) — временная папка).
+  # Строка из одних присваиваний (можно после export/declare/local/readonly):
+  # запомнить переменные (VAR=$(mktemp …) — временная папка).
+  a0=0; case "${w[0]}" in export|declare|local|readonly|typeset) a0=1 ;; esac
   allassign=1
-  for t in "${w[@]}"; do case "$t" in [A-Za-z_]*=*) ;; *) allassign=0 ;; esac; done
-  if [ "$allassign" = 1 ]; then
-    for t in "${w[@]}"; do
+  for t in "${w[@]:$a0}"; do case "$t" in [A-Za-z_]*=*) ;; -*) ;; *) allassign=0 ;; esac; done
+  if [ "$allassign" = 1 ] && [ "$n" -gt "$a0" ]; then
+    for t in "${w[@]:$a0}"; do
+      case "$t" in -*) continue ;; esac
       v=${t#*=}
       v=$(expand_value "$v")                       # VAR=$(…)/x, VAR="$TMPDIR/x"
       VARN+=("${t%%=*}"); VARV+=("$v")
@@ -359,6 +287,8 @@ while IFS= read -r line; do
       [ "$t" = - ] && t=$prevdir
       # цель раскрываем до смены prevdir: иначе cd "$OLDPWD" раскроется в новый каталог
       d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
+      # несуществующий каталог: cd не сработает, команда продолжится в прежнем
+      dir_reachable "$d" || continue
       [ "$cmd" = pushd ] && pstack+=("$curdir")
       prevdir=$curdir
       curdir=$d; continue ;;
@@ -386,19 +316,11 @@ while IFS= read -r line; do
       case "$sub" in
         push|send-pack) deny "git $sub отправляет код на GitHub — приёмщик и разведчик ничего не отправляют." ;;
         clone)
-          # цель — второй позиционный аргумент после URL (флаги со значением пропускаем)
-          npos=0; tgt=""; k=0
-          while [ "$k" -lt "${#rest[@]}" ]; do
-            a=${rest[$k]}
-            case "$a" in
-              -b|--branch|-o|--origin|--depth|--reference|--reference-if-able|-c|--config|--template|--separate-git-dir|--filter|-j|--jobs|--shallow-since|--shallow-exclude|-u|--upload-pack|--server-option) k=$((k+2)); continue ;;
-              -*) ;;
-              *) npos=$((npos+1)); [ "$npos" = 2 ] && tgt=$a ;;
-            esac
-            k=$((k+1))
-          done
-          if [ -n "$tgt" ]; then write_in_project "$tgt" "$gitdir" && deny "git clone внутрь проекта ($tgt)."
-          else in_project . "$gitdir" && deny "git clone без каталога назначения — клон окажется в проекте."; fi ;;
+          tgt=$(clone_target ${rest[@]+"${rest[@]}"})
+          if [ -n "$tgt" ]; then
+            write_in_project "$tgt" "$gitdir" && deny "git clone внутрь проекта ($tgt)."
+            CLONED+=("$(norm "$tgt" "$gitdir")")
+          fi ;;
         *)
           if in_project . "$gitdir"; then
             git_read_ok "$sub" ${rest[@]+"${rest[@]}"} || deny "git $sub меняет репозиторий проекта."
@@ -438,6 +360,7 @@ while IFS= read -r line; do
       done
       continue ;;
     tee|mkdir|rmdir|rm|touch|mv|chmod)
+      [ "$cmd" = mkdir ] && for a in ${args[@]+"${args[@]}"}; do case "$a" in -*) ;; *) MKDIRS+=("$(norm "$a" "$curdir")") ;; esac; done
       # пути только вне проекта (mkdir временной папки, tee в файл во временной папке) — можно
       any=0
       for a in ${args[@]+"${args[@]}"}; do
