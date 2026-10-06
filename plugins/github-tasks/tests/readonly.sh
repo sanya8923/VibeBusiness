@@ -60,7 +60,19 @@ run block $RV Bash 'sudo sed -i x README.md'
 run block $RV Bash 'timeout 30 tee README.md'
 run block $RV Bash 'printf "%s" "$(echo x > README.md)"'
 
+run block $RV Bash 'echo x 2>/dev/null >README.md'
+run block $RV Bash 'cat a &>README.md'
+run block $RV Bash 'sudo --user nobody tee README.md'
+run block $RV Bash 'cat <<EOF > README.md
+x
+EOF'
+
 echo "== приёмщик и разведчик: разрешено"
+run allow $RV Bash 'npm test >/dev/null 2>&1'
+run allow $RV Bash 'git log -1 2>&1 | head'
+run allow $RV Bash 'grep -c x < README.md'
+run allow $RV Bash 'echo "> README.md"'
+run allow $RV Bash 'jq . <<< "{}"'
 run allow $RV Read "$SB/README.md"
 run allow $RV Bash 'gh pr diff 5'
 run allow $RV Bash 'gh pr view 5 --comments'

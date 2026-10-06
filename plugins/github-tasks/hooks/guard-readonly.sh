@@ -68,18 +68,26 @@ while IFS= read -r line; do
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
 
-  # Запись перенаправлением: «> файл», «>> файл», «>файл».
-  for ((k = 0; k < n; k++)); do
-    t=${w[$k]}
+  # Запись перенаправлением. tokenize.awk выдаёт перенаправление одним словом с
+  # пометкой \002: «\002>файл», «\0022>>файл», «\002&>файл», «\0022>&1». Чтение (<, <<<)
+  # и дублирование дескриптора (>&1, >&-) — не запись в файл.
+  rest=()
+  for t in ${w[@]+"${w[@]}"}; do
     case "$t" in
-      '>'|'>>'|'1>'|'2>'|'&>'|'1>>'|'2>>') tgt=${w[$((k+1))]:-} ;;
-      '>&'*|'2>&'*) continue ;;
-      '>>'*) tgt=${t#>>} ;;
-      '>'*|'1>'*|'2>'*) tgt=${t#*>} ;;
-      *) continue ;;
+      $'\002'*)
+        r=${t#$'\002'}
+        op=$(printf '%s' "$r" | sed -E 's/^([0-9]*[&]?[<>]+[|&]?).*/\1/')
+        tgt=${r#"$op"}
+        case "$op" in
+          *'>'*'&'|*'<'*) ;;
+          *) [ -n "$tgt" ] && ! is_temp "$tgt" "$curdir" && deny "запись в файл $tgt." ;;
+        esac ;;
+      *) rest+=("$t") ;;
     esac
-    [ -n "$tgt" ] && ! is_temp "$tgt" "$curdir" && deny "запись в файл $tgt."
   done
+  w=(${rest[@]+"${rest[@]}"})
+  n=${#w[@]}
+  [ "$n" -gt 0 ] || continue
 
   # Сама команда: пропускаем служебные слова, присваивания, обёртки с их флагами,
   # значениями флагов и числами (sudo -u x, timeout 30, nice -n 5 …).
@@ -90,6 +98,8 @@ while IFS= read -r line; do
       if|then|else|elif|fi|do|done|while|until|'!') pf=0 ;;
       time|command|builtin|exec|nohup|nice|sudo|doas|xargs|env|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer|arch) pf=0 ;;
       -?) [ "$i" -gt 0 ] && pf=1 || break ;;
+      --*=*) [ "$i" -gt 0 ] && pf=0 || break ;;
+      --*) [ "$i" -gt 0 ] && pf=1 || break ;;
       -*) [ "$i" -gt 0 ] && pf=0 || break ;;
       *=*) pf=0 ;;
       *) if [ "$i" -gt 0 ] && [[ "$wi" =~ ^[0-9.]+[smhd]?$ ]]; then pf=0
