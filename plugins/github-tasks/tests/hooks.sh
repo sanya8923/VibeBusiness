@@ -116,7 +116,20 @@ run block "$WT" 'timeout --signal=KILL 30s git add -A'
 run block "$WT" 'env -i PATH=/usr/bin git add -A'
 run block "$WT" 'xargs -I {} git add -A'
 
+echo "== перенаправления и длинные флаги обёрток (вторая приёмка #16)"
+run block "$WT" 'git checkout main 2>&1 && git commit -m x'
+run block "$WT" 'git checkout main 2>/dev/null && git commit -m x'
+run block "$WT" 'git switch main >/dev/null 2>&1; git commit -m x'
+run block "$SB" 'git push origin 2>&1'
+run block "$SB" 'git push origin >/dev/null'
+run block "$WT" 'timeout --signal KILL 30 git push --force'
+run block "$WT" 'sudo --user nobody git add -A'
+run block "$WT" 'env --unset FOO git add -A'
+run block "$WT" 'stdbuf --output L git push -f'
+
 echo "== должны проходить"
+run allow "$WT" 'git push -u origin hooktest 2>&1'
+run allow "$WT" 'git checkout hooktest 2>&1 && git commit -m x'
 run allow "$SB" 'git push origin --tags'
 run allow "$WT" 'xargs -n1 echo git push --force'
 run allow "$WT" 'timeout 60 grep "git add -A" file.txt'

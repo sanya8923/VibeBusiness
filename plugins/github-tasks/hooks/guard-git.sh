@@ -20,6 +20,7 @@
 #   --show-toplevel)" вместо «.»;
 # - git push origin x:heads/main (git сам дописывает до main);
 # - git merge на основной ветке (коммит слияния) не запрещается;
+# - env -C <каталог> git … — смену каталога через env хук не отслеживает;
 # - очень длинная команда (150+ вызовов git, скрипт на сотни КБ) может не уложиться в
 #   таймаут хука 10 с — тогда Claude Code выполнит её без проверки.
 set -uo pipefail
@@ -78,7 +79,18 @@ current_branch() {  # каталог репозитория
 }
 
 while IFS= read -r line; do
-  IFS=$'\037' read -r -a w <<<"$line"
+  IFS=$'\037' read -r -a raw <<<"$line"
+  # Перенаправления (>, 2>, >/dev/null, &>, < файл …) — не аргументы команды: убираем их
+  # и, если оператор отдельным словом, его цель. Иначе «2>» сошёл бы за путь или refspec.
+  w=(); skip=0
+  for t in ${raw[@]+"${raw[@]}"}; do
+    if [ "$skip" = 1 ]; then skip=0; continue; fi
+    case "$t" in
+      '>'|'>>'|'<'|'&>'|'&>>'|[0-9]'>'|[0-9]'>>'|[0-9]'<') skip=1; continue ;;
+      '>'*|'<'*|[0-9]'>'*|[0-9]'<'*|'&>'*) continue ;;
+    esac
+    w+=("$t")
+  done
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
   i=0
@@ -106,6 +118,8 @@ while IFS= read -r line; do
         case "$wk" in
           time|command|builtin|exec|nohup|nice|sudo|doas|xargs|env|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer|arch) pf=0 ;;
           -?) pf=1 ;;
+          --*=*) pf=0 ;;
+          --*) pf=1 ;;   # длинный флаг без «=» может взять значение следующим словом
           -*) pf=0 ;;
           *=*) pf=0 ;;
           *) if [[ "$wk" =~ ^[0-9.]+[smhd]?$ ]]; then pf=0
