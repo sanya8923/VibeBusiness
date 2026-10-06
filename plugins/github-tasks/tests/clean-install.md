@@ -1,0 +1,86 @@
+# Проверка на чистой установке
+
+Порядок живой проверки плагина перед выпуском. Автотесты (`tests/*.sh`) проверяют скрипты и
+хуки по отдельности; здесь — весь плагин в настоящих сессиях Claude Code, установленный
+так, как его поставит получатель.
+
+## Стенд
+
+- Новый закрытый репозиторий без меток процесса и без `.claude/` — только README.
+- Плагин ставится из каталога витрины с областью «только этот репозиторий», глобальные
+  настройки не меняются:
+  ```
+  claude plugin marketplace add <владелец>/VibeBusiness#<ветка> --scope local
+  claude plugin install github-tasks@vibe-business --scope local
+  ```
+  Для выпуска из основной ветки — без `#<ветка>`.
+- После обновления ветки плагин обновляется только при новой версии в `plugin.json`;
+  иначе — `claude plugin uninstall` и снова `install`.
+- Сессии — `claude -p` из каталога репозитория. Одобрения человека заменяются фразой «план
+  одобряю заранее». Журнал сессии пишется флагами `--output-format stream-json --verbose`
+  в файл `.jsonl` (флаги пишутся прямо в команде — так команды работают и в bash, и в zsh);
+  вызовы инструментов в нём — строки с `"type":"tool_use"` (имя в
+  `name`, параметры в `input`), ответы — `"type":"tool_result"`. Готовые команды:
+  ```
+  # постановка и настройка
+  claude -p "/github-tasks:setup — проект настроек одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > 1-setup.jsonl
+  claude -p "/github-tasks:task-new <замысел>. План одобряю заранее" --allowedTools "Bash,Read,Agent" --output-format stream-json --verbose > 2a.jsonl
+  # полный цикл: приёмщику нужны Agent и SendMessage
+  claude -p "/github-tasks:cycle N — планы одобряю заранее" --allowedTools "Agent,Bash,Read,Edit,Write,SendMessage" --output-format stream-json --verbose > 2b.jsonl
+  # исполнение, приёмка, проверка перед релизом
+  claude -p "/github-tasks:task-do N — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > t.jsonl
+  claude -p "/github-tasks:review N" --allowedTools "Agent,Bash,Read" --output-format stream-json --verbose > r.jsonl
+  claude -p "/github-tasks:release-check" --allowedTools "Bash,Read" --output-format stream-json --verbose > rc.jsonl
+  ```
+
+## Шаги и что должно получиться
+
+1. **Установка и настройка.** `/github-tasks:setup` → PR настройки: `.claude/github-tasks.json`,
+   шаблон задачи, строка `.claude/worktrees/` в `.gitignore`, блок ссылок-фильтров в README;
+   метки статуса и приоритета заведены; `.claude/settings.local.json` в PR не попал. PR
+   сливает человек. Каждая ссылка-фильтр открывается в поиске GitHub без ошибки.
+2. **Полный цикл с возвратом.** Задача ставится `/github-tasks:task-new` с критерием, который
+   нельзя выполнить с первой попытки (например, «вторая строка — первая строка из раздела
+   „Что не так → что сделать“ первого вердикта»). `/github-tasks:cycle N` → вердикты
+   «Возврат → Принято» в PR, в журнале `2b.jsonl` ровно один вызов `Agent` с
+   `"subagent_type":"github-tasks:reviewer"` и `SendMessage` с `"to"` — его идентификатором,
+   PR слит, задача закрыта. По истории меток задачи (`gh api …/issues/N/timeline`) в любой
+   момент — не больше одной метки статуса.
+3. **Параллельные сессии.**
+   - **Гонка за одну задачу.** Две `task-do A` запускаются одновременно, в фоне:
+     ```
+     claude -p "/github-tasks:task-do A — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > ra.jsonl &
+     claude -p "/github-tasks:task-do A — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > rb.jsonl &
+     wait
+     ```
+     Задачу берёт ровно одна. Признак настоящей гонки (сверки заявок): у проигравшей в
+     журнале «задачу #A одновременно взяла другая сессия» (код 3), а не «уже есть
+     исполнитель» — последнее значит, что она пришла уже после захвата. В задаче остаётся
+     одна заявка, один исполнитель, метка `in-progress`.
+   - **Две задачи параллельно.** Одновременно `cycle B` и `cycle C` (как выше, в фоне):
+     обе работы слиты, в основной ветке файлы обеих задач и файлы прошлых шагов.
+4. **Запреты хуков.** Сессию просят выполнить `git add -A`, `git commit` на основной ветке и
+   `git push --force` в отдельную тестовую ветку — все три отклонены хуком плагина, HEAD и
+   индекс не изменились, ветки на GitHub нет.
+5. **Проверка перед релизом.** Веха со сроком и открытая задача-блокер в ней →
+   `/github-tasks:release-check` первой строкой «Нельзя выкладывать» и называет задачу;
+   после закрытия — «Можно выкладывать.»; тегов и выкладки нет.
+
+## Уборка стенда
+
+```
+claude plugin uninstall github-tasks@vibe-business --scope local
+claude plugin marketplace remove vibe-business --scope local
+```
+Именно с `--scope local`: без него каталог убирается отовсюду и вместе с ним снимаются
+установки плагина в других репозиториях. Созданные проверкой задачи, вехи и ветки — закрыть
+и удалить.
+
+## Ограничения стенда
+
+- Сессии идут под учётной записью разработчика: его собственные плагины и хуки в Claude
+  Code остаются включены. Режим `--bare` их выключает, но выключает и сам плагин.
+  Полностью чистую машину даёт только второй аккаунт.
+- Хук «только чтение» для приёмщика в живой сессии проверяется слабо: агент-приёмщик по
+  своей инструкции отказывается пробовать запись, хук срабатывает только при прямом
+  поручении. Основная проверка — `tests/readonly.sh` с настоящим `agent_type`.
