@@ -1,5 +1,5 @@
 {
-  "description": "github-tasks: запреты для git в проектах с процессом задач, напоминание о незапушенном, сводка задач при старте",
+  "description": "github-tasks: запреты для git в проектах с процессом задач, приёмщик и разведчик только на чтение, напоминание о незапушенном, сводка задач при старте",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,6 +8,16 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-git.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|NotebookEdit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-readonly.sh\"",
             "timeout": 10
           }
         ]
