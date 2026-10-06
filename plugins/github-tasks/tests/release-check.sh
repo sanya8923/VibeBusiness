@@ -62,6 +62,26 @@ check "вывод упавшей проверки показан" has "слом�
 check "«проходит» — пройдена" has "✔ проходит"
 git checkout -q -- . 2>/dev/null
 
+echo "== сломанный файл настроек — не «можно»"
+printf '{\n  "release_checks": [{"name": "тесты", "run": "exit 1"},]\n}\n' > .claude/github-tasks.json
+out=$(/bin/bash "$P/release-check.sh" "$MD" 2>&1); code=$?
+check "код 1" test "$code" = 1
+check "названа ошибка чтения" has "не удалось прочитать release_checks"
+printf '{\n  "release_checks": [{"name": "без команды"}]\n}\n' > .claude/github-tasks.json
+out=$(/bin/bash "$P/release-check.sh" "$MD" 2>&1); code=$?
+check "проверка без run — ошибка" has "без поля run"
+git checkout -q -- . 2>/dev/null
+
+echo "== тег на коммите слияния PR — этого PR в списке нет"
+read -r prn oid <<<"$(gh pr list -R "$R" --state merged --limit 1 --json number,mergeCommit -q '.[0] | "\(.number) \(.mergeCommit.oid)"')"
+TAG="rc-tag-$$"
+gh api "repos/$R/git/refs" -f ref="refs/tags/$TAG" -f sha="$oid" >/dev/null
+git fetch -q --tags origin 2>/dev/null
+out=$(/bin/bash "$P/release-check.sh" "$MD" 2>&1)
+check "взят тег $TAG" has "Изменения с $TAG"
+check "PR #$prn на теге в список не попал" test -z "$(sed -n '/^Изменения/,$p' <<<"$out" | grep -F "#$prn ")"
+gh api -X DELETE "repos/$R/git/refs/tags/$TAG" >/dev/null 2>&1; git tag -d "$TAG" >/dev/null 2>&1
+
 echo "== недоступный репозиторий"
 out=$(GT_REPO=sanya8923/no-such-repo-$$ /bin/bash "$P/release-check.sh" 2>&1); code=$?
 check "код 1" test "$code" = 1

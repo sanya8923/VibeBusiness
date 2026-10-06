@@ -19,12 +19,14 @@ ok()   { echo "  ✔ $*"; }
 bad()  { echo "  ✘ $*"; fails+=("$1"); }
 skip() { echo "  – $*"; }
 
-# gh с проверкой: вывод в $GHOUT, код — свой. Ошибку не превращаем в «пусто = всё хорошо».
-ghq() { GHOUT=$(gh "$@" 2>&1); }
+# gh с проверкой: данные — в $GHOUT, ошибка — в $GHERR, код — свой. Ошибку не превращаем
+# в «пусто = всё хорошо»; служебные строки gh в stderr не попадают в данные.
+GHERRF=$(mktemp); trap 'rm -f "$GHERRF"' EXIT
+ghq() { local c; GHOUT=$(gh "$@" 2>"$GHERRF"); c=$?; GHERR=$(head -1 "$GHERRF"); [ -n "$GHERR" ] || GHERR=$GHOUT; return $c; }
 
 if ! ghq repo view "$R" --json defaultBranchRef -q .defaultBranchRef.name; then
   echo "Проверка перед релизом: $R"
-  bad "не удалось обратиться к репозиторию на GitHub: $(printf '%s' "$GHOUT" | head -1)"
+  bad "не удалось обратиться к репозиторию на GitHub: $GHERR"
   echo; echo "Нельзя выкладывать: не удалось проверить репозиторий"; exit 1
 fi
 BASE=$(gt_cfg base_branch); [ -n "$BASE" ] || BASE=$GHOUT
@@ -35,7 +37,7 @@ echo "1. Задачи вехи"
 M=${1:-}
 if [ -n "$M" ]; then
   if ! ghq api --paginate "repos/$R/milestones?state=all&per_page=100" -q '.[].title'; then
-    bad "не удалось получить вехи: $(printf '%s' "$GHOUT" | head -1)"; M=""
+    bad "не удалось получить вехи: $GHERR"; M=""
   elif ! printf '%s\n' "$GHOUT" | grep -qxF "$M"; then
     bad "веха «${M}» не найдена в репозитории"; M=""
   fi
@@ -48,14 +50,14 @@ else
     if [ -n "$M" ]; then echo "  (веха не указана — взята ближайшая открытая: «${M}»)"
     else skip "открытых вех нет — проверка задач вехи пропущена"; fi
   else
-    bad "не удалось получить вехи: $(printf '%s' "$GHOUT" | head -1)"; M=""
+    bad "не удалось получить вехи: $GHERR"; M=""
   fi
 fi
 if [ -n "$M" ]; then
   if ghq issue list -R "$R" --milestone "$M" --state open --limit 500 --json number -q '[.[] | "#\(.number)"] | join(", ")'; then
     if [ -z "$GHOUT" ]; then ok "веха «${M}»: открытых задач нет"; else bad "задачи вехи «${M}» не закрыты: $GHOUT"; fi
   else
-    bad "не удалось получить задачи вехи: $(printf '%s' "$GHOUT" | head -1)"
+    bad "не удалось получить задачи вехи: $GHERR"
   fi
 fi
 
@@ -64,13 +66,13 @@ echo "2. Блокеры"
 if ghq issue list -R "$R" --label "$BLOCKED" --state open --limit 200 --json number -q '[.[] | "#\(.number)"] | join(", ")'; then
   if [ -z "$GHOUT" ]; then ok "открытых блокеров нет"; else bad "открытые блокеры: $GHOUT"; fi
 else
-  bad "не удалось проверить блокеры: $(printf '%s' "$GHOUT" | head -1)"
+  bad "не удалось проверить блокеры: $GHERR"
 fi
 
 # 3. CI — последний прогон каждого активного воркфлоу на базовой ветке
 echo "3. CI на ветке $BASE"
 if ! ghq workflow list -R "$R" --json id,name,state -q '.[] | select(.state == "active") | "\(.id)\u001f\(.name)"'; then
-  bad "не удалось получить воркфлоу: $(printf '%s' "$GHOUT" | head -1)"
+  bad "не удалось получить воркфлоу: $GHERR"
 elif [ -z "$GHOUT" ]; then
   skip "воркфлоу CI в репозитории нет — проверка пропущена"
 else
@@ -124,23 +126,34 @@ fi
 
 # 5. Проверки проекта
 echo "5. Проверки проекта (release_checks)"
-release_checks() {  # «имя␟команда» по строке на проверку из файла настроек
+release_checks() {  # «имя␟команда» по строке на проверку; ошибка разбора — код не 0
   local f
   f=$(gt_config_file)
   if command -v python3 >/dev/null 2>&1; then
     python3 -c '
 import json, sys
 c = json.load(open(sys.argv[1], encoding="utf-8"))
-for x in c.get("release_checks") or []:
+for i, x in enumerate(c.get("release_checks") or []):
+    if not isinstance(x, dict) or not x.get("run"):
+        sys.exit("проверка №%d без поля run" % (i + 1))
     print((x.get("name") or x["run"]) + "\x1f" + x["run"])' "$f"
   elif command -v node >/dev/null 2>&1; then
     node -e '
 const c = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-for (const x of c.release_checks || []) console.log((x.name || x.run) + "\u001f" + x.run);' "$f"
+(c.release_checks || []).forEach((x, i) => {
+  if (!x || !x.run) { console.error("проверка №" + (i + 1) + " без поля run"); process.exit(1); }
+  console.log((x.name || x.run) + "\u001f" + x.run);
+});' "$f"
+  else
+    echo "нет python3 и node — файл настроек не прочитать" >&2; return 3
   fi
 }
-checks=$(release_checks)
-if [ -z "$checks" ]; then skip "в настройках проверок нет"; else
+rcerr=$(mktemp)
+if ! checks=$(release_checks 2>"$rcerr"); then
+  bad "не удалось прочитать release_checks: $(tail -1 "$rcerr")"; checks=""; rcfail=1
+else rcfail=0; fi
+rm -f "$rcerr"
+if [ -z "$checks" ]; then [ "$rcfail" = 1 ] || skip "в настройках проверок нет"; else
   while IFS=$'\x1f' read -r name run; do
     # stdin — пустой: иначе проверка, читающая stdin, «съест» список остальных проверок
     out=$(cd "$ROOT" && bash -c "$run" </dev/null 2>&1); code=$?
@@ -152,13 +165,19 @@ fi
 echo "Изменения${tag:+ с ${tag}}:"
 since=""
 [ -n "$tag" ] && since=$(TZ=UTC git -C "$ROOT" log -1 --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd "$tag" 2>/dev/null)
-if ghq pr list -R "$R" --state merged --base "$BASE" --limit 100 ${since:+--search "merged:>$since"} \
-     --json number,title -q '.[] | "  - #\(.number) \(.title)"'; then
-  if [ -n "$GHOUT" ]; then printf '%s\n' "$GHOUT"; else echo "  (слитых PR нет)"; fi
+if ghq pr list -R "$R" --state merged --base "$BASE" --limit 100 ${since:+--search "merged:>=$since"} \
+     --json number,title,mergeCommit -q '.[] | "\(.mergeCommit.oid // "")\u001f#\(.number) \(.title)"'; then
+  shown=0
+  while IFS=$'\x1f' read -r oid title; do
+    [ -n "$title" ] || continue
+    # PR, чей коммит слияния уже входит в тег, — часть прошлого релиза
+    if [ -n "$tag" ] && [ -n "$oid" ] && git -C "$ROOT" merge-base --is-ancestor "$oid" "$tag" 2>/dev/null; then continue; fi
+    echo "  - $title"; shown=1
+  done <<<"$GHOUT"
+  [ "$shown" = 1 ] || echo "  (слитых PR нет)"
 else
-  echo "  (не удалось получить список PR: $(printf '%s' "$GHOUT" | head -1))"
+  echo "  (не удалось получить список PR: $GHERR)"
 fi
-
 echo
 if [ ${#fails[@]} = 0 ]; then echo "Можно выкладывать."; exit 0; fi
 msg=""; for f in "${fails[@]}"; do msg="${msg:+$msg; }$f"; done
