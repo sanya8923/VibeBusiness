@@ -56,6 +56,17 @@ check "запуск без ошибки" test "$code" = 0
 check "ссылка «Блокеры» — метка в кавычках, запрос закодирован" grep -qF 'label%3A%22good%20first%20issue%22' README.md
 check "метка «good first issue» не задвоена" test "$(gh label list -R "$R" --limit 200 --json name -q '[.[] | select(.name | ascii_downcase == "good first issue")] | length')" = 1
 
+echo "== сопоставленная метка на кириллице"
+git checkout -q -- . 2>/dev/null
+printf '{\n  "labels": {"in_progress": "в работе"}\n}\n' > .claude/github-tasks.json
+/bin/bash "$P/setup.sh" >/dev/null 2>&1; code=$?
+check "запуск без ошибки" test "$code" = 0
+check "кириллица закодирована верно (%D0%B2 = «в»)" grep -qF 'label%3A%22%D0%B2%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%B5%22' README.md
+before=$(cksum < README.md)
+/bin/bash "$P/setup.sh" >/dev/null 2>&1
+check "повторный запуск под /bin/bash README не меняет" test "$before" = "$(cksum < README.md)"
+gh label delete "в работе" -R "$R" --yes >/dev/null 2>&1
+
 echo "== метка уже есть в другом регистре"
 git checkout -q -- . 2>/dev/null
 printf '{\n  "labels": {"blocked": "Blocked"}\n}\n' > .claude/github-tasks.json
@@ -75,5 +86,6 @@ check "понятная причина" grep -qF 'маркеры блока фи
 git checkout -q -- . 2>/dev/null
 git clean -qfd .github 2>/dev/null
 git ls-files --error-unmatch .gitignore >/dev/null 2>&1 || rm -f .gitignore
+gh label edit ready -R "$R" -c 0e8a16 -d "Постановка полная, задачу можно брать" >/dev/null 2>&1
 echo "итог: верно $pass, ошибок $fail"
 [ $fail = 0 ]

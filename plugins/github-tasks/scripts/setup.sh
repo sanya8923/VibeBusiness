@@ -52,7 +52,8 @@ urlencode() {
     ch=${s:$k:1}
     case "$ch" in
       [A-Za-z0-9._~-]) out="$out$ch" ;;
-      *) out="$out$(printf '%%%02X' "'$ch")" ;;
+      # & 255: bash 3.2 читает байт старше 0x7F как отрицательное число
+      *) out="$out$(printf '%%%02X' $(( $(printf '%d' "'$ch") & 255 )))" ;;
     esac
   done
   printf '%s' "$out"
@@ -81,9 +82,13 @@ tmp=$(mktemp); blockfile=$(mktemp)
 printf '%s\n' "$block" > "$blockfile"
 open_n=$(grep -cF '<!-- github-tasks:filters -->' "$readme" || true)
 close_n=$(grep -cF '<!-- /github-tasks:filters -->' "$readme" || true)
-if [ "$open_n" != "$close_n" ] || [ "$open_n" -gt 1 ]; then
+if [ "$open_n" != "$close_n" ]; then
   rm -f "$tmp" "$blockfile"
   gt_die "в README.md маркеры блока фильтров непарные (открывающих: $open_n, закрывающих: $close_n) — поправь README вручную, файл не тронут"
+fi
+if [ "$open_n" -gt 1 ]; then
+  rm -f "$tmp" "$blockfile"
+  gt_die "в README.md блок фильтров встречается $open_n раза — оставь один и запусти снова, файл не тронут"
 fi
 if [ "$open_n" = 1 ] && [ "$(grep -nF '<!-- github-tasks:filters -->' "$readme" | cut -d: -f1)" -gt "$(grep -nF '<!-- /github-tasks:filters -->' "$readme" | cut -d: -f1)" ]; then
   rm -f "$tmp" "$blockfile"
