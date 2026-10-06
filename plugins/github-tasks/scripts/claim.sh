@@ -38,8 +38,10 @@ cid=$(gh api "repos/$R/issues/$N/comments" \
 # Даём одновременной заявке другой сессии успеть появиться в выдаче.
 sleep "${GT_CLAIM_WAIT_SECONDS:-3}"
 
+# Своя заявка участвует всегда: при коротком сроке годности она сама могла бы
+# «устареть» за время ожидания, и сессия проиграла бы самой себе.
 first=$(gh api --paginate "repos/$R/issues/$N/comments" \
-  -q ".[] | select(.body | startswith(\"$MARK\")) | select((now - (.created_at | fromdateiso8601)) < $STALE) | .id" \
+  -q ".[] | select(.body | startswith(\"$MARK\")) | select(.id == $cid or (now - (.created_at | fromdateiso8601)) < $STALE) | .id" \
   | sort -n | head -1)
 
 if [ "$first" != "$cid" ]; then
@@ -48,4 +50,11 @@ if [ "$first" != "$cid" ]; then
 fi
 
 gh issue edit "$N" -R "$R" --add-assignee @me --add-label "$INP" --remove-label "$READY" >/dev/null
+
+# Победитель убирает все чужие заявки, включая брошенные: после захвата в задаче
+# остаётся одна заявка, и по ней видно, чья задача.
+for c in $(gh api --paginate "repos/$R/issues/$N/comments" \
+    -q ".[] | select(.body | startswith(\"$MARK\")) | .id"); do
+  [ "$c" = "$cid" ] || gh api -X DELETE "repos/$R/issues/comments/$c" >/dev/null || true
+done
 echo "задача #$N взята (сессия $SID)"

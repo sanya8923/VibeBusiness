@@ -18,6 +18,8 @@ gt_root() {
 gt_config_file() { echo "$(gt_root)/.claude/github-tasks.json"; }
 
 gt_require_config() {
+  # gt_root вызываем не в подстановке: её gt_die завершил бы только подоболочку.
+  git rev-parse --git-common-dir >/dev/null 2>&1 || gt_die "это не git-репозиторий"
   [ -f "$(gt_config_file)" ] || gt_die "в проекте нет .claude/github-tasks.json — процесс здесь не включён (настройка проекта создаёт файл)"
 }
 

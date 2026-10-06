@@ -25,7 +25,10 @@ git -C "$WT" fetch -q origin "$BASE"
 ahead=$(git -C "$WT" rev-list --count "origin/$BASE..HEAD")
 [ "$ahead" -gt 0 ] || gt_die "в ветке $BR нет коммитов поверх $BASE — нечего отдавать на приёмку"
 
-git -C "$WT" push -q -u origin "$BR"
+# Подсказку GitHub «Create a pull request…» не показываем, ошибку — показываем.
+if ! out=$(git -C "$WT" push -q -u origin "$BR" 2>&1); then
+  echo "$out" >&2; gt_die "не удалось отправить ветку $BR"
+fi
 
 pr=$(gh pr list -R "$R" --head "$BR" --state open --json number -q '.[0].number // empty')
 if [ -z "$pr" ]; then
