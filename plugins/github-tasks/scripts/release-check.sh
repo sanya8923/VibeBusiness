@@ -91,7 +91,7 @@ if [ -z "$checks" ]; then skip "в настройках проверок нет"
 fi
 
 # Список изменений
-echo "Изменения ${tag:+с $tag}:"
+echo "Изменения${tag:+ с ${tag}}:"
 since=""
 [ -n "$tag" ] && since=$(git -C "$ROOT" log -1 --format=%cI "$tag" 2>/dev/null | cut -c1-10)
 gh pr list -R "$R" --state merged --base "$BASE" --limit 50 ${since:+--search "merged:>=$since"} \
@@ -99,5 +99,6 @@ gh pr list -R "$R" --state merged --base "$BASE" --limit 50 ${since:+--search "m
 
 echo
 if [ ${#fails[@]} = 0 ]; then echo "Можно выкладывать."; exit 0; fi
-echo "Нельзя выкладывать: $(IFS=';'; echo "${fails[*]}")"
+msg=""; for f in "${fails[@]}"; do msg="${msg:+$msg; }$f"; done
+echo "Нельзя выкладывать: $msg"
 exit 1
