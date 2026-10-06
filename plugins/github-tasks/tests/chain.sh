@@ -29,11 +29,15 @@ step "claim снова сразу после освобождения"; CLAUDE_C
 
 step "worktree"; WT=$(/bin/bash "$P/worktree.sh" "$N" | tail -1); echo "путь: $WT"; git -C "$WT" status --short --branch | head -1
 step "open-pr без коммитов (ожидаем отказ)"; /bin/bash "$P/open-pr.sh" "$N"; echo "код $?"
+echo "правка" >> "$WT/README.md"
+step "open-pr с незакоммиченной правкой отслеживаемого файла (ожидаем отказ)"; /bin/bash "$P/open-pr.sh" "$N"; echo "код $?"
+git -C "$WT" checkout -q -- README.md
 echo "привет" > "$WT/hello.txt"
-step "open-pr с незакоммиченным файлом (ожидаем отказ)"; /bin/bash "$P/open-pr.sh" "$N"; echo "код $?"
+echo "посторонний" > "$WT/stray.txt"
 git -C "$WT" add hello.txt && git -C "$WT" commit -q -m "hello.txt"
 printf 'Что сделано: файл hello.txt.\nЧем проверено: cat hello.txt → привет.\n' > "$S/report.md"
-step "open-pr"; PRURL=$(/bin/bash "$P/open-pr.sh" "$N" "$S/report.md" | tail -1); PR=${PRURL##*/}; echo "PR: $PRURL → $(lbl $N)"
+step "open-pr при постороннем неотслеживаемом файле (ожидаем PR и предупреждение)"; PRURL=$(/bin/bash "$P/open-pr.sh" "$N" "$S/report.md" | tail -1); PR=${PRURL##*/}; echo "PR: $PRURL → $(lbl $N)"
+echo "файлы PR: $(gh pr diff "$PR" -R "$R" --name-only | tr '\n' ' ')"
 echo "тело PR, первая строка: $(gh pr view $PR -R $R --json body -q .body | head -1)"
 
 step "merge PR в другую базу (ожидаем отказ с понятным текстом)"
@@ -54,4 +58,4 @@ step "возврат: in_progress, исправление, повторный op
 gh pr comment "$PR" -R "$R" -b "Вердикт: Принято" >/dev/null
 step "merge при вердикте «Принято»"; /bin/bash "$P/merge.sh" "$PR"; echo "код $?"
 sleep 3; echo "задача: $(lbl $N); PR: $(gh pr view $PR -R $R --json state -q .state)"
-git -C "$S/sandbox" worktree remove "$WT" && echo "рабочая копия убрана"
+git -C "$S/sandbox" worktree remove --force "$WT" && echo "рабочая копия убрана"
