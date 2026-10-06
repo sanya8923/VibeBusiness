@@ -99,7 +99,24 @@ for c in "cd $TMPW/clone && git push origin HEAD:issue-4" "git -C $TMPW/clone pu
   run block $RV Bash "$c"
 done
 
+echo "== четвёртая приёмка: путь к проекту из подстановки, cd в подстановку"
+for c in 'ROOT=$(git rev-parse --show-toplevel); echo x >> "$ROOT/README.md"' \
+  'ROOT=$(git rev-parse --show-toplevel) && cp /tmp/fix.md "$ROOT/README.md"' \
+  'ROOT=$(git rev-parse --show-toplevel); cd "$TMPDIR" && echo x >> "$ROOT/README.md"' \
+  'ROOT=$(pwd); cd "$TMPDIR/clone" && cp README.md "$ROOT/README.md"' \
+  'cd "$TMPDIR/clone" && cp README.md "$OLDPWD/README.md"' 'echo x >> "$PWD/README.md"' \
+  'cd "$(git rev-parse --show-toplevel)" && sed -i "" s/a/b/ README.md' \
+  'cd "$(git rev-parse --show-toplevel)" && echo x >> README.md' 'cd $(git rev-parse --show-toplevel) && rm hello.txt' \
+  'X=$(cat path.txt); echo x > "$X/out"' 'cd "$(cat path.txt)" && rm hello.txt'; do
+  run block $RV Bash "$c"
+done
+
 echo "== обычная работа приёмщика — разрешено"
+for c in 'D="$TMPDIR/rv" && git clone -b main https://github.com/o/r.git "$D" && cd "$D" && npm ci && npm test' \
+  'cd "$(mktemp -d)" && git clone -q https://github.com/o/r.git c && cd c && npm test' \
+  'diff <(git show HEAD~1:README.md) README.md' 'W=$(mktemp -d); echo v > "$W/verdict.md"; gh pr comment 5 -F "$W/verdict.md"'; do
+  run allow $RV Bash "$c"
+done
 for c in 'D=$(mktemp -d) && git clone -b main https://github.com/o/r.git "$D/c" && cd "$D/c" && npm ci && npm test' \
   "git clone https://github.com/o/r.git $TMPW/rv -b issue-4" "gh repo clone o/r $TMPW/rv2" "cd $TMPW/clone && gh pr checkout 18" \
   "git branch --list 'issue-*'" 'git branch -a --contains HEAD' 'git branch --merged main' "git tag -l 'v*'" \

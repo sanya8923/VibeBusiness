@@ -62,8 +62,38 @@ VARN=(); VARV=()
 var_get() {
   local k
   for ((k = ${#VARN[@]} - 1; k >= 0; k--)); do [ "${VARN[$k]}" = "$1" ] && { echo "${VARV[$k]}"; return 0; }; done
-  case "$1" in TMPDIR) echo "$TMPBASE"; return 0 ;; HOME) echo "$HOME"; return 0 ;; esac
+  case "$1" in
+    TMPDIR) echo "$TMPBASE"; return 0 ;;
+    HOME) echo "$HOME"; return 0 ;;
+    PWD) echo "$curdir"; return 0 ;;
+    OLDPWD) echo "$prevdir"; return 0 ;;
+  esac
   return 1
+}
+# Значение с переменной в начале ($VAR/…, ${VAR}…, ~) — раскрыть; неизвестная → «?».
+expand_value() {
+  local p=$1 name rest v
+  case "$p" in
+    '$'*)
+      name=$(printf '%s' "$p" | sed -E 's/^\$\{?([A-Za-z_][A-Za-z0-9_]*).*/\1/')
+      rest=$(printf '%s' "$p" | sed -E 's/^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?//')
+      v=$(var_get "$name") || { echo "?"; return; }
+      [ "$v" = "?" ] && { echo "?"; return; }
+      echo "$v$rest" ;;
+    "~"|"~/"*) echo "$HOME${p#\~}" ;;
+    *) echo "$p" ;;
+  esac
+}
+# Чему равна подстановка $(команда): mktemp → временная папка, pwd → текущий каталог,
+# git rev-parse --show-toplevel → корень репозитория текущего каталога; иное → «?».
+subst_value() {  # слова команды
+  case "${1##*/} ${2:-}" in
+    "mktemp "*) echo "$TMPBASE/mktemp" ;;
+    "pwd "*) echo "$curdir" ;;
+    "git rev-parse") [ "${3:-}" = --show-toplevel ] && { hk_root "$curdir"; return; }; echo "?" ;;
+    "realpath "*|"readlink "*) [ -n "${2:-}" ] && norm "$2" "$curdir" || echo "?" ;;
+    *) echo "?" ;;
+  esac
 }
 
 # Путь без «.» и «..», с раскрытием ссылок (каталогов и самого файла; на macOS /tmp — это
@@ -71,14 +101,7 @@ var_get() {
 # в начале пути — печатает «?» (путь неизвестен).
 norm() {
   local p=$1 base=$2 out="" part head tail v name rest n
-  case "$p" in
-    '$'*)
-      name=$(printf '%s' "$p" | sed -E 's/^\$\{?([A-Za-z_][A-Za-z0-9_]*).*/\1/')
-      rest=$(printf '%s' "$p" | sed -E 's/^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?//')
-      v=$(var_get "$name") || { echo "?"; return; }
-      p="$v$rest" ;;
-    "~"|"~/"*) p="$HOME${p#\~}" ;;
-  esac
+  p=$(expand_value "$p"); [ "$p" = "?" ] && { echo "?"; return; }
   case "$p" in /*) ;; *) p="$base/$p" ;; esac
   for n in 1 2 3 4 5 6 7 8; do
     out=""
@@ -118,12 +141,12 @@ in_project() {  # путь $1 от каталога $2 — внутри прое
   case "$p/" in "$PROOT"/*) return 0 ;; esac
   return 1
 }
-# Цель записи внутри проекта? Неизвестный путь (переменная извне команды) из каталога
-# проекта считается проектом — запись туда не проверить.
+# Цель записи внутри проекта? Неизвестный путь (переменная извне команды или из
+# произвольной подстановки) считается проектом — запись туда не проверить.
 write_in_project() {
   local p
   p=$(norm "$1" "$2")
-  if [ "$p" = "?" ]; then [ "$here_project" = 1 ]; return; fi
+  [ "$p" = "?" ] && return 0
   [ -n "$PROOT" ] || return 1
   case "$p/" in "$PROOT"/*) return 0 ;; esac
   return 1
@@ -251,7 +274,7 @@ gh_check() {  # аргументы gh после обёрток
   deny "gh $sub $sub2 меняет GitHub."
 }
 
-curdir=$CWD; prevdir=$CWD; last_cmd=""
+curdir=$CWD; prevdir=$CWD; last_cmd=""; subval="?"
 dstack=(); pstack=()
 while IFS= read -r line; do
   # границы подоболочки и подстановки: cd внутри них наружу не действует
@@ -266,6 +289,8 @@ while IFS= read -r line; do
   esac
   IFS=$'\037' read -r -a raw <<<"$line"
   [ ${#raw[@]} -gt 0 ] || continue
+  # команда внутри подстановки: запомнить, чему подстановка равна
+  if [ ${#dstack[@]} -gt 0 ]; then subval=$(subst_value ${raw[@]+"${raw[@]}"}); fi
   here_project=0; in_project . "$curdir" && here_project=1
 
   # Перенаправления (слова с пометкой \002 от tokenize.awk): запись внутрь проекта — нет.
@@ -294,7 +319,8 @@ while IFS= read -r line; do
   if [ "$allassign" = 1 ]; then
     for t in "${w[@]}"; do
       v=${t#*=}
-      if [ -z "$v" ] && [ "$last_cmd" = mktemp ]; then v="$TMPBASE/mktemp"; fi
+      if [ "$v" = $'\004' ]; then v=$subval                            # VAR=$(…)
+      else v=$(expand_value "$v"); fi                                  # VAR="$TMPDIR/x"
       VARN+=("${t%%=*}"); VARV+=("$v")
     done
     continue
@@ -326,8 +352,10 @@ while IFS= read -r line; do
 
   case "$cmd" in
     cd|pushd)
-      t=${args[0]:-$HOME}
-      if [ "$t" = - ]; then t=$prevdir; fi
+      if [ "$na" = 0 ]; then t=$HOME
+      elif [ "${args[0]}" = $'\004' ]; then t=$subval                       # cd "$(…)"
+      else t=${args[0]}; fi
+      [ "$t" = - ] && t=$prevdir
       [ "$cmd" = pushd ] && pstack+=("$curdir")
       prevdir=$curdir
       d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
