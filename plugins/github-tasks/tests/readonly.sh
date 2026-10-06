@@ -131,6 +131,9 @@ for c in 'REPO_DIR="$(mktemp -d)/repo" && git clone -b main https://github.com/o
   run allow $RV Bash "$c"
 done
 run allow $SC Bash 'while IFS= read -r f; do wc -l "$f"; done < <(git ls-files)'
+run allow $RV Bash 'gh repo clone o/r "$(mktemp -d)/r" -- -b issue-1'
+run allow $RV Bash 'git clone "$(git remote get-url origin)" "$(mktemp -d)/r" -b issue-1'
+run allow $RV Bash 'D="$(mktemp -d)/r" && git clone "$(git remote get-url origin)" "$D" -b issue-1 && cd "$D" && npm test'
 for c in 'D="$TMPDIR/rv" && git clone -b main https://github.com/o/r.git "$D" && cd "$D" && npm ci && npm test' \
   'cd "$(mktemp -d)" && git clone -q https://github.com/o/r.git c && cd c && npm test' \
   'diff <(git show HEAD~1:README.md) README.md' 'W=$(mktemp -d); echo v > "$W/verdict.md"; gh pr comment 5 -F "$W/verdict.md"'; do
