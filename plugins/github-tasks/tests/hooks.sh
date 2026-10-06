@@ -11,6 +11,8 @@ H="$(cd "$(dirname "$0")/../hooks" && pwd)"
 SB=$S/sandbox
 WT=$SB/.claude/worktrees/hooktest
 NC=$S/noconf
+SP="$S/with space"   # ссылка на sandbox с пробелом в пути
+[ -e "$SP" ] || ln -s "$SB" "$SP"
 pass=0; fail=0
 
 run() {  # ожидание(block|allow) каталог команда
@@ -40,6 +42,48 @@ run block "$NC" "git -C $SB commit -m x"
 run block "$WT" 'echo готово; git add -A'
 run block "$WT" 'git status && git push -f'
 
+echo "== обходы, найденные приёмкой (должны блокироваться)"
+run block "$NC" "(cd $WT && git add -A)"
+run block "$WT" '(git add -A)'
+run block "$WT" '{ git add -A; }'
+run block "$WT" 'if git add -A; then echo ok; fi'
+run block "$WT" 'echo $(git add -A)'
+run block "$WT" 'echo `git add -A`'
+run block "$WT" 'git push \
+  --force origin hooktest'
+run block "$WT" 'git add \
+  -A'
+run block "$WT" 'git commit -m "строка 1
+строка 2" && git push --force'
+run block "$WT" 'git commit -m "строка 1
+строка 2" && git add -A'
+run block "$WT" 'git add -vA'
+run block "$WT" 'git add -Av'
+run block "$WT" 'git add --al'
+run block "$WT" 'git add --no-ignore-removal'
+run block "$WT" 'git push --force-w origin hooktest'
+run block "$WT" 'git push --force-with origin hooktest'
+run block "$WT" 'git push --mirr'
+run block "$WT" 'git push -uf origin hooktest'
+run block "$WT" 'command git add -A'
+run block "$WT" 'env git add -A'
+run block "$WT" 'env GIT_TRACE=1 git push --force'
+run block "$WT" '/usr/bin/git add -A'
+run block "$WT" '\git add -A'
+run block "$WT" 'git switch main && git commit -m x'
+run block "$WT" 'git checkout main; git commit -m x'
+run block "$NC" "cd \"$SP/.claude/worktrees/hooktest\" && git add -A"
+run block "$NC" "git -C \"$SP\" commit -m x"
+run block "$NC" "pushd $WT && git add -A"
+run block "$WT" 'git push origin HEAD:main'
+run block "$WT" 'git push origin hooktest:main'
+run block "$WT" 'git push origin hooktest:refs/heads/main'
+run block "$SB" 'git push origin main'
+run block "$SB" 'git push origin HEAD'
+run block "$WT" 'git add -- .'
+run block "$WT" 'git add *'
+run block "$WT" 'echo "итог: $(git add -A)"'
+
 echo "== должны проходить"
 run allow "$WT" 'git add plugins/a.txt docs/b.md'
 run allow "$WT" 'git commit -m "запрет git add -A и git push --force в тексте"'
@@ -53,6 +97,18 @@ run allow "$SB" 'git pull --ff-only'
 run allow "$NC" 'git add -A'
 run allow "$NC" 'git push --force'
 run allow "$NC" 'ls -la'
+run allow "$WT" 'git commit -m "многострочное
+git add -A теперь блокируется"'
+run allow "$WT" 'gh pr create --title t --body "текст
+git add -A и git push --force в описании"'
+run allow "$WT" 'git commit -m "-a в тексте"'
+run allow "$SB" 'git switch -c feature && git commit -m x'
+run allow "$SB" 'git checkout -b feature2; git commit -m x'
+run allow "$WT" 'git push origin HEAD'
+run allow "$WT" 'git push -o ci.skip origin hooktest'
+run allow "$WT" 'git push origin --follow-tags hooktest'
+run allow "$WT" 'git log --format="%H %s" -n 3 | cat'
+run allow "$WT" 'echo "\$(git add -A)"'
 
 echo "итог: верно $pass, ошибок $fail"
 [ $fail = 0 ]

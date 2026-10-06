@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# PreToolUse-хук для Bash: три запрета в проектах с процессом github-tasks.
-#   1. git add -A / --all / . / -u и git commit -a — в коммит попадают чужие файлы;
-#   2. любой force push — переписывает историю на GitHub, чужая работа теряется;
-#   3. git commit на основной ветке или на base_branch — работа идёт мимо PR и приёмки.
+# PreToolUse-хук для Bash: запреты в проектах с процессом github-tasks.
+#   1. git add -A / --all / . / -u (и их слитые и сокращённые формы), git commit -a —
+#      в коммит попадают чужие и посторонние файлы;
+#   2. force push в любой форме и push прямо в основную ветку или в base_branch —
+#      перезапись истории и работа мимо PR;
+#   3. git commit на основной ветке или на base_branch — работа мимо PR и приёмки.
 # Код 2 — команда заблокирована, причина уходит Claude через stderr.
 #
-# Команда разбирается по тексту, поэтому разбор приближённый:
-# - текст в кавычках и тела heredoc не разбираются — «git add -A» внутри сообщения
-#   коммита запретом не считается;
-# - каталог команды берётся из `cd ДИР`, `git -C ДИР` и cwd хука; путь из переменной
-#   ($DIR) не раскрывается, тогда проверяется cwd.
+# Команду разбирает tokenize.awk: кавычки, переносы строк, подоболочки, группы,
+# подстановки команд и heredoc учтены. Каталог команды — из cd/pushd, git -C и cwd хука;
+# ветка — из git switch/checkout ранее в той же команде, иначе текущая. Путь из
+# переменной ($DIR) не раскрывается — тогда проверяется каталог сессии; eval и
+# bash -c '…' внутрь не разбираются.
 set -uo pipefail
 set -f  # без подстановки * — разбираем текст команды, а не файлы
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -28,28 +30,6 @@ deny() {
   exit 2
 }
 
-# 1) выкинуть тела heredoc; 2) снять кавычки, заменив внутри них пробелы и
-#    разделители команд на «_»; 3) разбить на отдельные команды по ; & | и переводу строки.
-SEGMENTS=$(printf '%s\n' "$CMD" | awk '
-  skip != "" { if ($0 ~ "^[[:space:]]*" skip "[[:space:]]*$") skip = ""; next }
-  {
-    line = $0
-    if (match(line, /<<-?[[:space:]]*["\047]?[A-Za-z_][A-Za-z0-9_]*["\047]?/)) {
-      tag = substr(line, RSTART, RLENGTH); gsub(/<<-?[[:space:]]*|["\047]/, "", tag); skip = tag
-      line = substr(line, 1, RSTART - 1)
-    }
-    out = ""; q = ""
-    for (i = 1; i <= length(line); i++) {
-      c = substr(line, i, 1)
-      if (q == "" && (c == "\"" || c == "\047")) { q = c; continue }
-      if (q != "" && c == q) { q = ""; continue }
-      if (q != "" && (c == " " || c == ";" || c == "&" || c == "|")) c = "_"
-      out = out c
-    }
-    gsub(/&&|\|\||;|\||&/, "\n", out)
-    print out
-  }')
-
 resolve() {  # путь $1 относительно каталога $2
   case "$1" in
     /*) echo "$1" ;;
@@ -58,32 +38,71 @@ resolve() {  # путь $1 относительно каталога $2
   esac
 }
 
+# Короткая группа флагов ($1, например -vA) содержит один из символов $2?
+# Символы из $3 берут значение: всё после них — значение, а не флаги.
+short_has() {
+  local g=${1#-} k ch
+  for ((k = 0; k < ${#g}; k++)); do
+    ch=${g:$k:1}
+    case "$3" in *"$ch"*) return 1 ;; esac
+    case "$2" in *"$ch"*) return 0 ;; esac
+  done
+  return 1
+}
+# Короткая группа заканчивается флагом, который берёт значение следующим словом?
+short_takes_next() {
+  local g=${1#-} k ch
+  for ((k = 0; k < ${#g}; k++)); do
+    ch=${g:$k:1}
+    case "$2" in *"$ch"*) [ $k -eq $((${#g} - 1)) ] && return 0 || return 1 ;; esac
+  done
+  return 1
+}
+
 curdir=$CWD
-while IFS= read -r seg; do
-  # shellcheck disable=SC2206
-  w=($seg)
+sw_dir=""; sw_branch=""   # ветка, на которую команда переключилась раньше (switch/checkout)
+
+current_branch() {  # каталог репозитория
+  if [ -n "$sw_dir" ] && [ "$(hk_root "$1")" = "$sw_dir" ]; then echo "$sw_branch"; return; fi
+  git -C "$1" symbolic-ref -q --short HEAD 2>/dev/null || true
+}
+
+while IFS= read -r line; do
+  IFS=$'\037' read -r -a w <<<"$line"
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
   i=0
-  while [ "$i" -lt "$n" ] && [[ "${w[$i]}" == *=* ]] && [[ "${w[$i]}" != -* ]]; do i=$((i+1)); done
+  # Служебные слова, присваивания и обёртки перед командой.
+  while [ "$i" -lt "$n" ]; do
+    case "${w[$i]}" in
+      if|then|else|elif|fi|do|done|while|until|'!'|time|command|builtin|exec|nohup|nice|sudo|xargs) i=$((i+1)) ;;
+      env) i=$((i+1)); while [ "$i" -lt "$n" ] && [[ "${w[$i]}" == -* || "${w[$i]}" == *=* ]]; do i=$((i+1)); done ;;
+      -*) break ;;
+      *=*) i=$((i+1)) ;;
+      *) break ;;
+    esac
+  done
   [ "$i" -lt "$n" ] || continue
+  name=${w[$i]##*/}
 
-  if [ "${w[$i]}" = cd ]; then
-    if [ $((i+1)) -lt "$n" ]; then
-      d=$(resolve "${w[$((i+1))]}" "$curdir"); [ -d "$d" ] && curdir=$d
-    else
-      curdir=$HOME
-    fi
-    continue
-  fi
-  [ "${w[$i]}" = git ] || continue
+  case "$name" in
+    cd|pushd)
+      if [ $((i+1)) -lt "$n" ]; then
+        d=$(resolve "${w[$((i+1))]}" "$curdir"); [ -d "$d" ] && curdir=$d
+      else
+        curdir=$HOME
+      fi
+      continue ;;
+    git) ;;
+    *) continue ;;
+  esac
 
   gitdir=$curdir
   i=$((i+1))
   while [ "$i" -lt "$n" ] && [[ "${w[$i]}" == -* ]]; do
     case "${w[$i]}" in
       -C) d=$(resolve "${w[$((i+1))]:-.}" "$curdir"); [ -d "$d" ] && gitdir=$d; i=$((i+2)) ;;
-      -c|--git-dir|--work-tree|--namespace) i=$((i+2)) ;;
+      -c|--git-dir|--work-tree|--namespace|--exec-path) i=$((i+2)) ;;
       *) i=$((i+1)) ;;
     esac
   done
@@ -91,42 +110,98 @@ while IFS= read -r seg; do
   sub=${w[$i]}
   root=$(hk_root "$gitdir")
   [ -n "$root" ] && hk_enabled "$root" || continue
-
+  base=$(hk_base_branch "$root")
+  default=$(hk_default_branch "$root")
   args=("${w[@]:$((i+1))}")
+  na=${#args[@]}
+
   case "$sub" in
     add)
-      for a in ${args[@]+"${args[@]}"}; do
+      j=0; dashdash=0
+      while [ "$j" -lt "$na" ]; do
+        a=${args[$j]}
+        if [ "$dashdash" = 0 ]; then
+          case "$a" in
+            --) dashdash=1; j=$((j+1)); continue ;;
+            --pathspec-from-file) j=$((j+2)); continue ;;
+            --a|--al|--all|--u|--up|--upd|--upda|--updat|--update|--no-ignore-r*)
+              deny "git add $a запрещён: в коммит попадут чужие и посторонние файлы." \
+                   "Добавляй файлы задачи поимённо: git add путь/к/файлу ..." ;;
+            --*) ;;
+            -?*) short_has "$a" "Au" "" && deny "git add $a запрещён: флаг -A или -u добавляет все изменения разом." \
+                   "Добавляй файлы задачи поимённо: git add путь/к/файлу ..." ;;
+          esac
+        fi
         case "$a" in
-          -A|--all|-u|--update|.|./|:/|'*')
+          .|./|:/|:/.|'*'|'./*'|':(top)'|':/*')
             deny "git add $a запрещён: в коммит попадут чужие и посторонние файлы." \
                  "Добавляй файлы задачи поимённо: git add путь/к/файлу ..." ;;
         esac
+        j=$((j+1))
       done ;;
-    commit)
-      for a in ${args[@]+"${args[@]}"}; do
+
+    switch|checkout)
+      # Запоминаем, на какую ветку команда переключается, — для проверки коммита ниже.
+      j=0; target=""
+      while [ "$j" -lt "$na" ]; do
+        a=${args[$j]}
         case "$a" in
-          --all) deny "git commit --all запрещён: в коммит попадут все изменённые файлы." "Добавь файлы задачи поимённо через git add и коммить без -a." ;;
-          --*) ;;
-          -*a*) deny "git commit $a запрещён: флаг -a добавляет в коммит все изменённые файлы." "Добавь файлы задачи поимённо через git add и коммить без -a." ;;
+          --) target=""; break ;;
+          -c|-C|-b|-B|--create|--force-create|--orphan) target=${args[$((j+1))]:-}; break ;;
+          -*) ;;
+          *) [ -z "$target" ] && target=$a ;;
         esac
+        j=$((j+1))
       done
-      br=$(git -C "$gitdir" symbolic-ref -q --short HEAD 2>/dev/null || true)
-      base=$(hk_base_branch "$root")
-      default=$(hk_default_branch "$root")
+      if [ -n "$target" ]; then sw_dir=$root; sw_branch=$target; fi ;;
+
+    commit)
+      j=0
+      while [ "$j" -lt "$na" ]; do
+        a=${args[$j]}
+        case "$a" in
+          --) break ;;
+          --all) deny "git commit --all запрещён: в коммит попадут все изменённые файлы." "Добавь файлы задачи поимённо через git add и коммить без -a." ;;
+          --message|--file|--reuse-message|--reedit-message|--template|--author|--date|--fixup|--squash|--trailer|--pathspec-from-file|--cleanup) j=$((j+1)) ;;
+          --*) ;;
+          -?*)
+            short_has "$a" "a" "mFCct" && deny "git commit $a запрещён: флаг -a добавляет в коммит все изменённые файлы." "Добавь файлы задачи поимённо через git add и коммить без -a."
+            short_takes_next "$a" "mFCct" && j=$((j+1)) ;;
+        esac
+        j=$((j+1))
+      done
+      br=$(current_branch "$gitdir")
       if [ -n "$br" ] && { [ "$br" = "$default" ] || [ "$br" = "$base" ]; }; then
         deny "коммит прямо в ветку $br запрещён: работа должна идти через PR задачи." \
              "Возьми задачу и работай в её ветке: scripts/claim.sh N, затем scripts/worktree.sh N."
       fi ;;
+
     push)
-      for a in ${args[@]+"${args[@]}"}; do
+      j=0; pos=0
+      while [ "$j" -lt "$na" ]; do
+        a=${args[$j]}
         case "$a" in
-          --force|--force-with-lease*|--force-if-includes|--mirror)
+          --for*|--mi|--mir|--mirr|--mirro|--mirror)
             deny "git push $a запрещён: перезапись истории на GitHub уничтожает чужую работу." "Если push отклонён — забери изменения (git pull --rebase) и отправь снова без force." ;;
+          --repo|--receive-pack|--exec|--push-option) j=$((j+1)) ;;
           --*) ;;
-          -*f*) deny "git push $a запрещён: -f — это force push." "Если push отклонён — забери изменения (git pull --rebase) и отправь снова без force." ;;
-          +*) deny "git push $a запрещён: «+» перед веткой — это force push." "Отправляй ветку без «+»." ;;
+          -?*)
+            short_has "$a" "f" "o" && deny "git push $a запрещён: -f — это force push." "Если push отклонён — забери изменения (git pull --rebase) и отправь снова без force."
+            short_takes_next "$a" "o" && j=$((j+1)) ;;
+          *)
+            pos=$((pos+1))
+            if [ "$pos" -ge 2 ]; then   # первое позиционное — remote, дальше — refspec
+              case "$a" in +*) deny "git push $a запрещён: «+» перед веткой — это force push." "Отправляй ветку без «+»." ;; esac
+              dst=${a#*:}; dst=${dst#refs/heads/}
+              [ "$dst" = HEAD ] && dst=$(current_branch "$gitdir")
+              if [ "$dst" = "$default" ] || { [ -n "$base" ] && [ "$dst" = "$base" ]; }; then
+                deny "git push $a запрещён: это отправка прямо в ветку $dst мимо PR." \
+                     "Отправляй ветку задачи issue-N и открывай PR: scripts/open-pr.sh N."
+              fi
+            fi ;;
         esac
+        j=$((j+1))
       done ;;
   esac
-done <<<"$SEGMENTS"
+done < <(printf '%s' "$CMD" | awk -f "$HERE/tokenize.awk")
 exit 0

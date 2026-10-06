@@ -3,6 +3,10 @@
 # Незапушенные коммиты и незакоммиченные правки в рабочих копиях задач
 # (.claude/worktrees/) пропадут для следующей сессии и для приёмщика.
 # Ничего не блокирует — только сообщение пользователю.
+#
+# Событие Stop наступает после каждого ответа Claude, а не только в конце сессии: у
+# события конца сессии (SessionEnd) вывод пользователю не показывается. Поэтому
+# напоминание может появляться и посреди работы — это нормально, пока работа не отправлена.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 . "$HERE/common.sh"
@@ -23,7 +27,7 @@ while IFS= read -r line; do
   fi
   if git -C "$wt" rev-parse -q --verify '@{u}' >/dev/null 2>&1; then
     ahead=$(git -C "$wt" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
-    [ "$ahead" -gt 0 ] && notes="$notes\n- $name: $ahead незапушенных коммитов"
+    [ "$ahead" -gt 0 ] && notes="$notes\n- $name: незапушенных коммитов — $ahead"
   elif [ "$wt" != "$root" ]; then
     br=$(git -C "$wt" symbolic-ref -q --short HEAD 2>/dev/null || echo "?")
     notes="$notes\n- $name: ветка $br ни разу не отправлена на GitHub"
