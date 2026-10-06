@@ -241,11 +241,14 @@ while IFS= read -r line; do
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
 
-  # Строка из одних присваиваний: запомнить переменные (VAR=$(mktemp …) — временная папка).
+  # Строка из одних присваиваний (можно после export/declare/local/readonly):
+  # запомнить переменные (VAR=$(mktemp …) — временная папка).
+  a0=0; case "${w[0]}" in export|declare|local|readonly|typeset) a0=1 ;; esac
   allassign=1
-  for t in "${w[@]}"; do case "$t" in [A-Za-z_]*=*) ;; *) allassign=0 ;; esac; done
-  if [ "$allassign" = 1 ]; then
-    for t in "${w[@]}"; do
+  for t in "${w[@]:$a0}"; do case "$t" in [A-Za-z_]*=*) ;; -*) ;; *) allassign=0 ;; esac; done
+  if [ "$allassign" = 1 ] && [ "$n" -gt "$a0" ]; then
+    for t in "${w[@]:$a0}"; do
+      case "$t" in -*) continue ;; esac
       v=${t#*=}
       v=$(expand_value "$v")                       # VAR=$(…)/x, VAR="$TMPDIR/x"
       VARN+=("${t%%=*}"); VARV+=("$v")
@@ -284,6 +287,8 @@ while IFS= read -r line; do
       [ "$t" = - ] && t=$prevdir
       # цель раскрываем до смены prevdir: иначе cd "$OLDPWD" раскроется в новый каталог
       d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
+      # несуществующий каталог: cd не сработает, команда продолжится в прежнем
+      dir_reachable "$d" || continue
       [ "$cmd" = pushd ] && pstack+=("$curdir")
       prevdir=$curdir
       curdir=$d; continue ;;
@@ -311,19 +316,11 @@ while IFS= read -r line; do
       case "$sub" in
         push|send-pack) deny "git $sub отправляет код на GitHub — приёмщик и разведчик ничего не отправляют." ;;
         clone)
-          # цель — второй позиционный аргумент после URL (флаги со значением пропускаем)
-          npos=0; tgt=""; k=0
-          while [ "$k" -lt "${#rest[@]}" ]; do
-            a=${rest[$k]}
-            case "$a" in
-              -b|--branch|-o|--origin|--depth|--reference|--reference-if-able|-c|--config|--template|--separate-git-dir|--filter|-j|--jobs|--shallow-since|--shallow-exclude|-u|--upload-pack|--server-option) k=$((k+2)); continue ;;
-              -*) ;;
-              *) npos=$((npos+1)); [ "$npos" = 2 ] && tgt=$a ;;
-            esac
-            k=$((k+1))
-          done
-          if [ -n "$tgt" ]; then write_in_project "$tgt" "$gitdir" && deny "git clone внутрь проекта ($tgt)."
-          else in_project . "$gitdir" && deny "git clone без каталога назначения — клон окажется в проекте."; fi ;;
+          tgt=$(clone_target ${rest[@]+"${rest[@]}"})
+          if [ -n "$tgt" ]; then
+            write_in_project "$tgt" "$gitdir" && deny "git clone внутрь проекта ($tgt)."
+            MKDIRS+=("$(norm "$tgt" "$gitdir")")
+          fi ;;
         *)
           if in_project . "$gitdir"; then
             git_read_ok "$sub" ${rest[@]+"${rest[@]}"} || deny "git $sub меняет репозиторий проекта."
@@ -363,6 +360,7 @@ while IFS= read -r line; do
       done
       continue ;;
     tee|mkdir|rmdir|rm|touch|mv|chmod)
+      [ "$cmd" = mkdir ] && for a in ${args[@]+"${args[@]}"}; do case "$a" in -*) ;; *) MKDIRS+=("$(norm "$a" "$curdir")") ;; esac; done
       # пути только вне проекта (mkdir временной папки, tee в файл во временной папке) — можно
       any=0
       for a in ${args[@]+"${args[@]}"}; do

@@ -182,6 +182,16 @@ run allow "$SB" "WT=$WT; cd \"\$WT\" && git commit -m x"
 run allow "$SB" "WT=$WT; git -C \"\$WT\" commit -m x"
 run allow "$SB" "WT=\"$WT\" && git -C \"\$WT\" add a.txt && git -C \"\$WT\" commit -m x"
 run allow "$SB" "pushd $WT >/dev/null && git commit -m x && popd"
+run block "$WT" 'cd build 2>/dev/null; git add -A'
+run block "$WT" 'cd no-such-subdir; git add -A'
+run block "$WT" 'cd no-such-subdir
+git push --force'
+run block "$SB" 'cd /nonexistent-dir; git commit -m x'
+run block "$SB" 'pushd /nonexistent; git commit -m x'
+run allow "$WT" 'cd "$(git rev-parse --show-toplevel)" && git commit -m x'
+run allow "$WT" 'ROOT=$(git rev-parse --show-toplevel); git -C "$ROOT" commit -m x'
+run allow "$SB" "export WT=$WT; cd \"\$WT\" && git commit -m x"
+run allow "$SB" "D=\$(mktemp -d) && cd \"\$D\" && git init -q && git commit -m x"
 
 echo "== должны проходить"
 run allow "$WT" 'git push -u origin "$(git branch --show-current)"'

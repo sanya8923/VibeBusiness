@@ -95,11 +95,13 @@ while IFS= read -r line; do
   done
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
-  # Строка из одних присваиваний: запомнить переменные (WT=путь, D=$(mktemp -d) …).
+  # Строка из одних присваиваний (можно после export/declare/local/readonly):
+  # запомнить переменные (WT=путь, D=$(mktemp -d) …).
+  a0=0; case "${w[0]}" in export|declare|local|readonly|typeset) a0=1 ;; esac
   allassign=1
-  for t in "${w[@]}"; do case "$t" in [A-Za-z_]*=*) ;; *) allassign=0 ;; esac; done
-  if [ "$allassign" = 1 ]; then
-    for t in "${w[@]}"; do VARN+=("${t%%=*}"); VARV+=("$(expand_value "${t#*=}")"); done
+  for t in "${w[@]:$a0}"; do case "$t" in [A-Za-z_]*=*) ;; -*) ;; *) allassign=0 ;; esac; done
+  if [ "$allassign" = 1 ] && [ "$n" -gt "$a0" ]; then
+    for t in "${w[@]:$a0}"; do case "$t" in -*) continue ;; esac; VARN+=("${t%%=*}"); VARV+=("$(expand_value "${t#*=}")"); done
     continue
   fi
   i=0
@@ -148,8 +150,13 @@ while IFS= read -r line; do
       if [ $((i+1)) -lt "$n" ]; then t=${w[$((i+1))]}; else t=$HOME; fi
       [ "$t" = - ] && t=$prevdir
       d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
+      # несуществующий каталог: cd не сработает, команда продолжится в прежнем
+      dir_reachable "$d" || continue
       [ "$name" = pushd ] && pstack+=("$curdir")
       prevdir=$curdir; curdir=$d
+      continue ;;
+    mkdir)
+      for t in "${w[@]:$((i+1))}"; do case "$t" in -*) ;; *) MKDIRS+=("$(norm "$t" "$curdir")") ;; esac; done
       continue ;;
     popd)
       if [ ${#pstack[@]} -gt 0 ]; then
@@ -180,6 +187,10 @@ while IFS= read -r line; do
   default=$(hk_default_branch "$root")
   args=("${w[@]:$((i+1))}")
   na=${#args[@]}
+  if [ "$sub" = clone ]; then
+    t=$(clone_target ${args[@]+"${args[@]}"}); [ -n "$t" ] && MKDIRS+=("$(norm "$t" "$gitdir")")
+    continue
+  fi
 
   case "$sub" in
     add)

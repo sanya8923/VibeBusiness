@@ -120,6 +120,9 @@ for c in 'echo x >> "$(git rev-parse --show-toplevel)/README.md"' 'printf "x\n" 
   run block $RV Bash "$c"
 done
 run block $SC Bash 'echo x >> "$(git rev-parse --show-toplevel)/README.md"'
+run block $RV Bash 'cd /nonexistent-dir; rm hello.txt'
+run block $RV Bash 'cd no-such-subdir && true; echo x > README.md'
+run allow $RV Bash "mkdir -p $TMPW/fresh/x && cd $TMPW/fresh/x && npm test"
 
 echo "== обычная работа приёмщика — разрешено"
 for c in 'REPO_DIR="$(mktemp -d)/repo" && git clone -b main https://github.com/o/r.git "$REPO_DIR" && cd "$REPO_DIR" && npm test' \
