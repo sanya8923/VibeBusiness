@@ -21,7 +21,7 @@ BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2) }
 
 function flush_word() {
   if (inword) { seg = (seg == "" ? word : seg US word) }
-  word = ""; inword = 0
+  word = ""; inword = 0; wq = 0
 }
 function flush_seg() {
   flush_word()
@@ -39,7 +39,16 @@ function redirect(   t, ch, qq) {
     if (index(" \t\n;&|()<>", ch) > 0) break
     if (ch == "'" || ch == "\"") {
       qq = ch; i++
-      while (i <= n && substr(src, i, 1) != qq) { t = t substr(src, i, 1); i++ }
+      while (i <= n && substr(src, i, 1) != qq) {
+        if (qq == "\"" && substr(src, i, 1) == "\\") { t = t substr(src, i + 1, 1); i += 2; continue }
+        if (qq == "\"" && substr(src, i, 2) == "$(") {
+          # $(…) внутри кавычек исполняется: выводим перенаправление и отдаём разбор
+          # основному циклу, будто он внутри этих кавычек
+          flush_word(); word = RD op t; inword = 1; flush_word()
+          q = "\""; return
+        }
+        t = t substr(src, i, 1); i++
+      }
       i++; continue
     }
     t = t ch; i++
@@ -70,7 +79,7 @@ END {
       if (nx == "\n") { i += 2; continue }
       word = word nx; inword = 1; i += 2; continue
     }
-    if (c == "'" || c == "\"") { q = c; inword = 1; i++; continue }
+    if (c == "'" || c == "\"") { q = c; inword = 1; wq = 1; i++; continue }
     if (c == " " || c == "\t") { flush_word(); i++; continue }
     if (c == "#" && !inword) {
       while (i <= n && substr(src, i, 1) != "\n") i++
@@ -103,7 +112,8 @@ END {
     }
     # перенаправление: [N]> [N]>> >| [N]< <> [N]>& <& &> &>>
     if (c == ">" || c == "<" || (c == "&" && nx == ">")) {
-      if (inword && word ~ /^[0-9]+$/) { op = word; word = ""; inword = 0 } else { flush_word(); op = "" }
+      # номер дескриптора — только цифры без кавычек вплотную к оператору: "5">x — не 5>x
+      if (inword && !wq && word ~ /^[0-9]+$/) { op = word; word = ""; inword = 0 } else { flush_word(); op = "" }
       if (c == "&") {
         op = op "&>"; i += 2
         if (substr(src, i, 1) == ">") { op = op ">"; i++ }

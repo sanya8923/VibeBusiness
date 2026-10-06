@@ -144,7 +144,18 @@ run block "$WT" 'git add -A 2>/dev/null'
 run block "$WT" 'git add >/dev/null -A'
 run block "$WT" 'git checkout main &>/dev/null && git commit -m x'
 
+echo "== цели перенаправлений (#20)"
+run block "$WT" 'echo x > "a\"b" ; git add -A'
+run block "$WT" 'cat <<< "размер 5\"" && git push --force'
+run block "$WT" 'read a <<< "$(git add -A)"'
+run block "$WT" 'cat <<< x"$(git add -A)"'
+run block "$WT" 'echo x > "$(git add -A)"'
+run block "$WT" 'git commit -m "5">/dev/null -a'
+
 echo "== должны проходить"
+run allow "$WT" 'echo x > "a\"b" ; git status'
+run allow "$WT" 'git commit -m "5">/dev/null'
+run allow "$WT" 'cat <<< "$(git log -1)"'
 run allow "$WT" 'git commit -m "> цитата"'
 run allow "$WT" 'git commit -F - <<< "-a в тексте"'
 run allow "$WT" 'git log --format=">%s<" -3'
