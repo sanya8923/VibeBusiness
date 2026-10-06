@@ -67,10 +67,14 @@ END {
       j = i + 2; dash = 0
       if (substr(src, j, 1) == "-") { dash = 1; j++ }
       while (substr(src, j, 1) == " " || substr(src, j, 1) == "\t") j++
-      qc = substr(src, j, 1); if (qc == "'" || qc == "\"") j++; else qc = ""
+      # метка — всё до пробела или метасимвола; кавычки и «\» в ней снимаются
       tag = ""
-      while (j <= n && substr(src, j, 1) ~ /[A-Za-z0-9_]/) { tag = tag substr(src, j, 1); j++ }
-      if (qc != "" && substr(src, j, 1) == qc) j++
+      while (j <= n) {
+        ch = substr(src, j, 1)
+        if (index(" \t\n;&|()<>", ch) > 0) break
+        if (ch != "'" && ch != "\"" && ch != "\\") tag = tag ch
+        j++
+      }
       if (tag != "") { ntags++; tags[ntags] = tag; dashes[ntags] = dash }
       i = j; continue
     }

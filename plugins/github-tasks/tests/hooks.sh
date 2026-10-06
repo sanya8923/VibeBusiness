@@ -84,7 +84,34 @@ run block "$WT" 'git add -- .'
 run block "$WT" 'git add *'
 run block "$WT" 'echo "итог: $(git add -A)"'
 
+echo "== вторая приёмка: метки heredoc, обёртки, checkout файла, push без refspec"
+run block "$WT" 'cat <<EOF-1
+текст
+EOF-1
+git add -A'
+run block "$WT" 'cat <<END.TXT
+текст
+END.TXT
+git add -A'
+run block "$WT" 'timeout 30 git push --force'
+run block "$WT" 'nice -n 5 git add -A'
+run block "$WT" 'sudo -E git add -A'
+run block "$WT" 'env -u FOO git add -A'
+run block "$WT" 'time -p git add -A'
+run block "$WT" 'xargs -0 git add -A'
+run block "$SB" 'git checkout README.md && git commit -m x'
+run block "$SB" 'git push'
+run block "$SB" 'git push origin'
+run block "$WT" 'git checkout main && git merge hooktest && git push'
+run block "$WT" 'git push --all origin'
+
 echo "== должны проходить"
+run allow "$WT" 'cat <<\EOF
+git push --force
+EOF'
+run allow "$WT" 'git push'
+run allow "$WT" 'git push origin'
+run allow "$WT" 'git checkout README.md && git commit -m x'
 run allow "$WT" 'git add plugins/a.txt docs/b.md'
 run allow "$WT" 'git commit -m "запрет git add -A и git push --force в тексте"'
 run allow "$WT" "git commit -F - <<'EOF'

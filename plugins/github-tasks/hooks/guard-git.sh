@@ -10,8 +10,18 @@
 # Команду разбирает tokenize.awk: кавычки, переносы строк, подоболочки, группы,
 # подстановки команд и heredoc учтены. Каталог команды — из cd/pushd, git -C и cwd хука;
 # ветка — из git switch/checkout ранее в той же команде, иначе текущая. Путь из
-# переменной ($DIR) не раскрывается — тогда проверяется каталог сессии; eval и
-# bash -c '…' внутрь не разбираются.
+# переменной ($DIR) не раскрывается — тогда проверяется каталог сессии.
+#
+# Известные ограничения — обход требует нарочно странной записи:
+# - eval, bash -c '…', find … -exec git …, $(which git) add -A — внутрь не разбираются;
+# - обратные кавычки внутри двойных, $'…' с \', ${x:-$(git …)} без кавычек, $((1<<2)),
+#   $(git …) в теле heredoc с меткой без кавычек;
+# - git add ./., git add .>/dev/null, абсолютный путь корня или "$(git rev-parse
+#   --show-toplevel)" вместо «.»;
+# - git push origin x:heads/main (git сам дописывает до main);
+# - git merge на основной ветке (коммит слияния) не запрещается;
+# - очень длинная команда (150+ вызовов git, скрипт на сотни КБ) может не уложиться в
+#   таймаут хука 10 с — тогда Claude Code выполнит её без проверки.
 set -uo pipefail
 set -f  # без подстановки * — разбираем текст команды, а не файлы
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -75,8 +85,7 @@ while IFS= read -r line; do
   # Служебные слова, присваивания и обёртки перед командой.
   while [ "$i" -lt "$n" ]; do
     case "${w[$i]}" in
-      if|then|else|elif|fi|do|done|while|until|'!'|time|command|builtin|exec|nohup|nice|sudo|xargs) i=$((i+1)) ;;
-      env) i=$((i+1)); while [ "$i" -lt "$n" ] && [[ "${w[$i]}" == -* || "${w[$i]}" == *=* ]]; do i=$((i+1)); done ;;
+      if|then|else|elif|fi|do|done|while|until|'!') i=$((i+1)) ;;
       -*) break ;;
       *=*) i=$((i+1)) ;;
       *) break ;;
@@ -84,6 +93,15 @@ while IFS= read -r line; do
   done
   [ "$i" -lt "$n" ] || continue
   name=${w[$i]##*/}
+  # Обёртка (timeout 30, nice -n 5, sudo -E, env -u X, xargs -0 …): у неё свои флаги и
+  # аргументы, поэтому сама команда — первое следующее слово, которое и есть git.
+  case "$name" in
+    time|command|builtin|exec|nohup|nice|sudo|doas|xargs|env|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer)
+      k=$((i+1))
+      while [ "$k" -lt "$n" ] && [ "${w[$k]##*/}" != git ]; do k=$((k+1)); done
+      [ "$k" -lt "$n" ] || continue
+      i=$k; name=git ;;
+  esac
 
   case "$name" in
     cd|pushd)
@@ -149,7 +167,13 @@ while IFS= read -r line; do
           --) target=""; break ;;
           -c|-C|-b|-B|--create|--force-create|--orphan) target=${args[$((j+1))]:-}; break ;;
           -*) ;;
-          *) [ -z "$target" ] && target=$a ;;
+          *) if [ -z "$target" ]; then
+               # git checkout <файл> — не переход на ветку: считаем веткой, только если она есть
+               if git -C "$gitdir" rev-parse -q --verify "refs/heads/$a" >/dev/null 2>&1 \
+                  || git -C "$gitdir" rev-parse -q --verify "refs/remotes/origin/$a" >/dev/null 2>&1; then
+                 target=$a
+               fi
+             fi ;;
         esac
         j=$((j+1))
       done
@@ -181,6 +205,8 @@ while IFS= read -r line; do
       while [ "$j" -lt "$na" ]; do
         a=${args[$j]}
         case "$a" in
+          --al|--all)
+            deny "git push $a запрещён: отправляет все ветки, включая основную." "Отправляй только ветку задачи: git push -u origin issue-N." ;;
           --for*|--mi|--mir|--mirr|--mirro|--mirror)
             deny "git push $a запрещён: перезапись истории на GitHub уничтожает чужую работу." "Если push отклонён — забери изменения (git pull --rebase) и отправь снова без force." ;;
           --repo|--receive-pack|--exec|--push-option) j=$((j+1)) ;;
@@ -201,7 +227,15 @@ while IFS= read -r line; do
             fi ;;
         esac
         j=$((j+1))
-      done ;;
+      done
+      # Без refspec push отправляет текущую ветку — проверяем её.
+      if [ "$pos" -lt 2 ]; then
+        cur=$(current_branch "$gitdir")
+        if [ -n "$cur" ] && { [ "$cur" = "$default" ] || { [ -n "$base" ] && [ "$cur" = "$base" ]; }; }; then
+          deny "git push с ветки $cur — это отправка прямо в неё мимо PR." \
+               "Работай в ветке задачи issue-N и открывай PR: scripts/open-pr.sh N."
+        fi
+      fi ;;
   esac
 done < <(printf '%s' "$CMD" | awk -f "$HERE/tokenize.awk")
 exit 0
