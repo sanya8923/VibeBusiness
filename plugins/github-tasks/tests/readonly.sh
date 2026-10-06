@@ -76,7 +76,7 @@ for c in 'gh pr merge 5' 'gh pr -R o/r merge 5' 'gh pr close 5' 'gh pr edit 5 --
   'gh issue pin 5' 'gh issue develop 5' 'gh label create x' 'gh api -X DELETE repos/o/r/git/refs/heads/x' \
   'gh api --method=POST repos/o/r/issues' 'gh api repos/o/r/issues -fbody=x' 'gh api repos/o/r/issues --field=title=x' \
   'gh api repos/o/r/issues --raw-field=title=x' 'gh api repos/o/r/issues --input=/tmp/x.json' 'gh api -X patch repos/o/r/issues/1' \
-  'gh api -XPOST repos/o/r/issues' 'gh api graphql -F q=x' 'gh workflow run ci.yml' 'gh run cancel 1' \
+  'gh api -XPOST repos/o/r/issues' 'gh api graphql -F query=@/tmp/m.graphql' 'gh workflow run ci.yml' 'gh run cancel 1' \
   'gh secret set X -b y' 'gh variable set X -b y' 'gh gist create a' 'gh project item-edit' 'gh cache delete --all' \
   'curl -X POST -H "Authorization: token $(gh auth token)" https://api.github.com/x'; do
   run block $RV Bash "$c"
@@ -84,7 +84,31 @@ done
 run block $SC Bash 'gh pr comment 5 -b x'
 run block $SC Bash 'gh issue create -t x -b y'
 
+echo "== третья приёмка: push, ссылки, подоболочки, remote/fetch, мелкие формы"
+ln -s "$SB/README.md" "$TMPW/r"; ln -s "$SB" "$TMPW/p"
+for c in "cd $TMPW/clone && git push origin HEAD:issue-4" "git -C $TMPW/clone push origin HEAD:issue-4" \
+  "cd $TMPW/clone && git commit -am fix && git push" "git -C $TMPW/clone send-pack x" \
+  "ln -s $SB/README.md $TMPW/r2" "echo x >> $TMPW/r" "cp /etc/hosts $TMPW/r" "ln $SB/README.md $TMPW/h" \
+  "ln -s $SB $TMPW/p2 && echo x > $TMPW/p2/README.md" "echo x >> $TMPW/p/README.md" \
+  "(cd $TMPW/clone && true) && sed -i '' s/a/b/ README.md" "pushd $TMPW >/dev/null; popd >/dev/null; rm hello.txt" \
+  "cd $TMPW && cd - && rm hello.txt" 'git remote add upstream https://github.com/o/r.git' 'git remote set-url origin x' \
+  'git remote remove origin' 'git remote rename origin old' 'git fetch origin pull/1/head:pr-1' 'git fetch origin main:main' \
+  'git fetch --update-head-ok origin' 'echo x >& README.md' 'sort -uo README.md README.md' "yq -i '.a = 1' x.yml" \
+  'gh api -if body=x repos/o/r/issues/4/comments' 'gh api graphql -f query="mutation { x }"' 'F=README.md; echo x > "$F"' \
+  'echo x > "$UNKNOWN/x"' 'tee README.md < /dev/null' 'gh run download 1' 'gh repo clone o/r' 'gh pr checkout 18'; do
+  run block $RV Bash "$c"
+done
+
 echo "== обычная работа приёмщика — разрешено"
+for c in 'D=$(mktemp -d) && git clone -b main https://github.com/o/r.git "$D/c" && cd "$D/c" && npm ci && npm test' \
+  "git clone https://github.com/o/r.git $TMPW/rv -b issue-4" "gh repo clone o/r $TMPW/rv2" "cd $TMPW/clone && gh pr checkout 18" \
+  "git branch --list 'issue-*'" 'git branch -a --contains HEAD' 'git branch --merged main' "git tag -l 'v*'" \
+  'for f in README.md hello.txt; do wc -l "$f"; done' 'git log --format=%H -n 3 | while read h; do git show --stat "$h"; done' \
+  "gh api graphql -f query='query { viewer { login } }'" "git diff | tee $TMPW/pr.diff" "gh run download 123 -D $TMPW/art" \
+  'command -v npm' 'export GH_PAGER=cat; gh pr view 18' 'git fetch origin' 'git fetch origin main:refs/remotes/origin/main' \
+  "echo x 2>&1 >/dev/null" "cd $TMPW/clone && (cd sub 2>/dev/null; ls) && npm test" 'git remote' 'git remote show origin'; do
+  run allow $RV Bash "$c"
+done
 for c in 'gh pr diff 5' 'gh pr view 5 --comments' 'gh pr -R o/r view 18' 'gh pr checks 5' 'gh issue view 5 --comments' \
   'gh issue list --state all --limit 500 --json number,title' 'gh api repos/o/r/pulls/5/comments' \
   'gh api -X GET search/issues -f q=x' 'gh api --method=GET search/issues -fq=x --jq .total_count' 'gh run view 1' \

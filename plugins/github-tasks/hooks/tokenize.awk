@@ -16,11 +16,13 @@
 #   - ${…} остаётся частью слова;
 #   - перенаправления ([N]>, >>, >|, [N]<, &>, &>>, [N]>&M, <<<) распознаются только вне
 #     кавычек и выводятся отдельным словом с пометкой \002 в начале: «\002>файл».
-#     Запреты git такие слова пропускают, хук «только чтение» по ним видит запись.
+#     Запреты git такие слова пропускают, хук «только чтение» по ним видит запись;
+#   - границы подоболочки ( … ) и подстановки выводятся отдельными строками «\003(» и
+#     «\003)»: cd внутри них не действует снаружи, хуки восстанавливают каталог.
 # Это не полный разбор bash, а достаточный для запретов: ошибиться он должен в сторону
 # «увидеть лишнюю команду», а не «пропустить настоящую».
 
-BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2) }
+BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2); SM = sprintf("%c", 3) }
 { src = src $0 "\n" }
 
 function flush_word() {
@@ -35,6 +37,7 @@ function flush_seg() {
 
 # Вложенная подстановка: сохранить внешнюю команду и начать разбор внутренней.
 function push(closer) {
+  print SM "("
   sp++; S_seg[sp] = seg; S_word[sp] = word; S_q[sp] = q; S_wq[sp] = wq; S_cl[sp] = closer; S_pd[sp] = 0
   seg = ""; word = ""; inword = 0; q = ""; wq = 0
 }
@@ -42,6 +45,7 @@ function push(closer) {
 # слова внешней команды (её текст неизвестен, поэтому слово просто продолжается).
 function pop() {
   flush_seg()
+  print SM ")"
   seg = S_seg[sp]; word = S_word[sp]; q = S_q[sp]; wq = S_wq[sp]; inword = 1; sp--
 }
 
@@ -164,11 +168,13 @@ END {
       continue
     }
     if (c == ")" && sp > 0 && S_cl[sp] == ")") {
-      if (S_pd[sp] > 0) { flush_seg(); S_pd[sp]--; i++; continue }   # конец подоболочки внутри
+      if (S_pd[sp] > 0) { flush_seg(); print SM ")"; S_pd[sp]--; i++; continue }   # конец подоболочки внутри
       i++; pop(); continue
     }
     if (c == "(" && sp > 0) S_pd[sp]++
-    if (index(";&|(){}", c) > 0) { flush_seg(); i++; continue }
+    if (c == "(") { flush_seg(); print SM "("; i++; continue }
+    if (c == ")") { flush_seg(); print SM ")"; i++; continue }
+    if (index(";&|{}", c) > 0) { flush_seg(); i++; continue }
 
     word = word c; inword = 1; i++
   }

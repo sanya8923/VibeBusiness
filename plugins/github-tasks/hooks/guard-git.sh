@@ -78,7 +78,18 @@ current_branch() {  # каталог репозитория
   git -C "$1" symbolic-ref -q --short HEAD 2>/dev/null || true
 }
 
+dstack=()   # каталог и ветка до входа в подоболочку: «каталог\037ветка-каталог\037ветка»
 while IFS= read -r line; do
+  case "$line" in
+    $'\003('*) dstack+=("$curdir"$'\037'"$sw_dir"$'\037'"$sw_branch"); continue ;;
+    $'\003)'*)
+      if [ ${#dstack[@]} -gt 0 ]; then
+        top=${dstack[$((${#dstack[@]}-1))]}
+        IFS=$'\037' read -r curdir sw_dir sw_branch <<<"$top"
+        unset "dstack[$((${#dstack[@]}-1))]"; dstack=(${dstack[@]+"${dstack[@]}"})
+      fi
+      continue ;;
+  esac
   IFS=$'\037' read -r -a raw <<<"$line"
   # Перенаправления tokenize.awk помечает \002 — это не аргументы команды, пропускаем.
   w=()
