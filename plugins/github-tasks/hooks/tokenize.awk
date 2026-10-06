@@ -5,8 +5,12 @@
 # слово. Разбор посимвольный и сквозной по всей команде:
 #   - кавычки ' и " — состояние держится через переводы строк, кавычки снимаются;
 #   - «\» + перевод строки склеивает строки, «\x» даёт x (\git → git);
-#   - разделители команд: ; & | ( ) { } ` $( и перевод строки — так подоболочки,
-#     группы и подстановки команд разбираются как отдельные команды;
+#   - разделители команд: ; & | ( ) { } и перевод строки — подоболочки и группы
+#     разбираются как отдельные команды;
+#   - подстановка команды $(…) и `…` (в кавычках, без них, в цели перенаправления)
+#     разбирается как вложенная команда: состояние внешней команды сохраняется в стеке
+#     и восстанавливается после закрывающей скобки — аргументы после подстановки
+#     остаются у своей команды;
 #   - тела heredoc (<<TAG … TAG) пропускаются — это данные, а не команды;
 #   - # в начале слова — комментарий до конца строки;
 #   - ${…} остаётся частью слова;
@@ -21,12 +25,24 @@ BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2) }
 
 function flush_word() {
   if (inword) { seg = (seg == "" ? word : seg US word) }
-  word = ""; inword = 0
+  word = ""; inword = 0; wq = 0
 }
 function flush_seg() {
   flush_word()
   if (seg != "") print seg
   seg = ""
+}
+
+# Вложенная подстановка: сохранить внешнюю команду и начать разбор внутренней.
+function push(closer) {
+  sp++; S_seg[sp] = seg; S_word[sp] = word; S_q[sp] = q; S_wq[sp] = wq; S_cl[sp] = closer; S_pd[sp] = 0
+  seg = ""; word = ""; inword = 0; q = ""; wq = 0
+}
+# Конец подстановки: вывести внутреннюю команду и вернуться к внешней. Подстановка — часть
+# слова внешней команды (её текст неизвестен, поэтому слово просто продолжается).
+function pop() {
+  flush_seg()
+  seg = S_seg[sp]; word = S_word[sp]; q = S_q[sp]; wq = S_wq[sp]; inword = 1; sp--
 }
 
 # Цель перенаправления: слово после оператора (кавычки снимаются). Выводится одним
@@ -37,9 +53,19 @@ function redirect(   t, ch, qq) {
   while (i <= n) {
     ch = substr(src, i, 1)
     if (index(" \t\n;&|()<>", ch) > 0) break
+    # подстановка в цели: цель кончается, подстановку разбирает основной цикл
+    if (substr(src, i, 2) == "$(" || ch == "`") break
     if (ch == "'" || ch == "\"") {
       qq = ch; i++
-      while (i <= n && substr(src, i, 1) != qq) { t = t substr(src, i, 1); i++ }
+      while (i <= n && substr(src, i, 1) != qq) {
+        if (qq == "\"" && substr(src, i, 1) == "\\") { t = t substr(src, i + 1, 1); i += 2; continue }
+        if (qq == "\"" && (substr(src, i, 2) == "$(" || substr(src, i, 1) == "`")) {
+          # продолжаем разбор основным циклом «внутри этих кавычек»
+          flush_word(); word = RD op t; inword = 1; flush_word()
+          q = "\""; inword = 1; return
+        }
+        t = t substr(src, i, 1); i++
+      }
       i++; continue
     }
     t = t ch; i++
@@ -48,7 +74,7 @@ function redirect(   t, ch, qq) {
 }
 
 END {
-  n = length(src); ret = 0; q = ""; word = ""; inword = 0; seg = ""; ntags = 0
+  n = length(src); sp = 0; q = ""; word = ""; inword = 0; seg = ""; ntags = 0
   i = 1
   while (i <= n) {
     c = substr(src, i, 1); nx = substr(src, i + 1, 1)
@@ -59,8 +85,12 @@ END {
     }
     if (q == "\"") {
       if (c == "\\" && index("\"$`\\\n", nx) > 0) { if (nx != "\n") word = word nx; i += 2; continue }
-      # $( внутри двойных кавычек исполняется — разбираем как отдельную команду
-      if (c == "$" && nx == "(") { flush_seg(); ret++; q = ""; i += 2; continue }
+      # $(…) и `…` внутри двойных кавычек исполняются — вложенная команда
+      if (c == "$" && nx == "(") { i += 2; push(")"); continue }
+      if (c == "`") {
+        if (sp > 0 && S_cl[sp] == "`" && S_q[sp] == "\"" ) { i++; pop(); continue }
+        i++; push("`"); continue
+      }
       if (c == "\"") q = ""; else word = word c
       i++; continue
     }
@@ -68,9 +98,9 @@ END {
     # Вне кавычек.
     if (c == "\\") {
       if (nx == "\n") { i += 2; continue }
-      word = word nx; inword = 1; i += 2; continue
+      word = word nx; inword = 1; wq = 1; i += 2; continue
     }
-    if (c == "'" || c == "\"") { q = c; inword = 1; i++; continue }
+    if (c == "'" || c == "\"") { q = c; inword = 1; wq = 1; i++; continue }
     if (c == " " || c == "\t") { flush_word(); i++; continue }
     if (c == "#" && !inword) {
       while (i <= n && substr(src, i, 1) != "\n") i++
@@ -81,7 +111,11 @@ END {
       if (j == 0) j = n - i + 1
       word = word substr(src, i, j); inword = 1; i += j; continue
     }
-    if (c == "$" && nx == "(") { flush_seg(); i += 2; continue }
+    if (c == "$" && nx == "(") { i += 2; push(")"); continue }
+    if (c == "`") {
+      if (sp > 0 && S_cl[sp] == "`") { i++; pop(); continue }
+      i++; push("`"); continue
+    }
     # here-string <<< — оператор со своей целью, не heredoc
     if (substr(src, i, 3) == "<<<") { op = "<<<"; i += 3; redirect(); continue }
     if (c == "<" && nx == "<" && substr(src, i + 2, 1) != "<") {
@@ -103,7 +137,8 @@ END {
     }
     # перенаправление: [N]> [N]>> >| [N]< <> [N]>& <& &> &>>
     if (c == ">" || c == "<" || (c == "&" && nx == ">")) {
-      if (inword && word ~ /^[0-9]+$/) { op = word; word = ""; inword = 0 } else { flush_word(); op = "" }
+      # номер дескриптора — только цифры без кавычек вплотную к оператору: "5">x — не 5>x
+      if (inword && !wq && word ~ /^[0-9]+$/) { op = word; word = ""; inword = 0 } else { flush_word(); op = "" }
       if (c == "&") {
         op = op "&>"; i += 2
         if (substr(src, i, 1) == ">") { op = op ">"; i++ }
@@ -128,10 +163,15 @@ END {
       ntags = 0
       continue
     }
-    if (c == ")" && ret > 0) { flush_seg(); ret--; q = "\""; inword = 1; i++; continue }
-    if (index(";&|(){}`", c) > 0) { flush_seg(); i++; continue }
+    if (c == ")" && sp > 0 && S_cl[sp] == ")") {
+      if (S_pd[sp] > 0) { flush_seg(); S_pd[sp]--; i++; continue }   # конец подоболочки внутри
+      i++; pop(); continue
+    }
+    if (c == "(" && sp > 0) S_pd[sp]++
+    if (index(";&|(){}", c) > 0) { flush_seg(); i++; continue }
 
     word = word c; inword = 1; i++
   }
+  while (sp > 0) pop()
   flush_seg()
 }
