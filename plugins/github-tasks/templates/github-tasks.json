@@ -1,0 +1,15 @@
+{
+  "labels": {
+    "ready": "ready",
+    "in_progress": "in-progress",
+    "in_review": "in-review",
+    "blocked": "blocked",
+    "owner_decision": "owner-decision"
+  },
+  "base_branch": null,
+  "paths": [],
+  "checks": [],
+  "release_checks": [],
+  "task_rules": "",
+  "hooks": true
+}
