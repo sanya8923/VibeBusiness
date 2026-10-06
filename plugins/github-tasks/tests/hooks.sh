@@ -172,6 +172,17 @@ run block "$WT" '(cd /tmp && ls) && git push --force'
 run block "$WT" 'echo $(cd /tmp; pwd); git add -A'
 run allow "$WT" '(cd /tmp && git add -A)'
 
+echo "== переменные из этой же команды (#24)"
+run block "$NC" "WT=$SB; cd \"\$WT\" && git commit -m x"
+run block "$NC" "D=$SB; git -C \"\$D\" commit -m x"
+run block "$SB" 'ROOT=$(git rev-parse --show-toplevel); cd "$ROOT" && git commit -m x'
+run block "$SB" 'cd "$(git rev-parse --show-toplevel)" && git commit -m x'
+run block "$NC" "cd $WT && cd $SB && cd - && cd - && git commit -m x"
+run allow "$SB" "WT=$WT; cd \"\$WT\" && git commit -m x"
+run allow "$SB" "WT=$WT; git -C \"\$WT\" commit -m x"
+run allow "$SB" "WT=\"$WT\" && git -C \"\$WT\" add a.txt && git -C \"\$WT\" commit -m x"
+run allow "$SB" "pushd $WT >/dev/null && git commit -m x && popd"
+
 echo "== должны проходить"
 run allow "$WT" 'git push -u origin "$(git branch --show-current)"'
 run allow "$WT" "git commit -m \"\$(cat <<'EOF'
