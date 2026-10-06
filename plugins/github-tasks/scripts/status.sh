@@ -27,18 +27,21 @@ for k in $GT_STATUS_KEYS; do
   case ",$current," in *",$l,"*) remove+=("$l") ;; esac
 done
 
-args=()
-[ -n "$target" ] && args+=(--add-label "$target")
-[ ${#remove[@]} -gt 0 ] && args+=(--remove-label "$(IFS=,; echo "${remove[*]}")")
+# Сначала снимаем старые метки статуса, потом ставим новую: при одном вызове с
+# --add-label и --remove-label GitHub ставит новую раньше, чем снимает старую, и около
+# секунды у задачи два статуса. Момент без статуса допустим, двух сразу — нет.
+rm_args=()
+[ ${#remove[@]} -gt 0 ] && rm_args+=(--remove-label "$(IFS=,; echo "${remove[*]}")")
 
 if [ "$KEY" = ready ]; then
   logins=$(gh issue view "$N" -R "$R" --json assignees -q '[.assignees[].login] | join(",")')
-  [ -n "$logins" ] && args+=(--remove-assignee "$logins")
+  [ -n "$logins" ] && rm_args+=(--remove-assignee "$logins")
   for c in $(gh api --paginate "repos/$R/issues/$N/comments" \
       -q '.[] | select(.body | startswith("<!-- github-tasks:claim ")) | .id'); do
-    gh api -X DELETE "repos/$R/issues/comments/$c" >/dev/null
+    gh api -X DELETE "repos/$R/issues/comments/$c" >/dev/null 2>&1 || true
   done
 fi
 
-[ ${#args[@]} -gt 0 ] && gh issue edit "$N" -R "$R" "${args[@]}" >/dev/null
+[ ${#rm_args[@]} -gt 0 ] && gh issue edit "$N" -R "$R" "${rm_args[@]}" >/dev/null
+[ -n "$target" ] && gh issue edit "$N" -R "$R" --add-label "$target" >/dev/null
 echo "задача #$N: ${target:-без статуса}"
