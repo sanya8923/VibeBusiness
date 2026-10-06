@@ -52,6 +52,13 @@ EOF" \
   run block $RV Bash "$c"
 done
 
+for c in 'sort -o README.md README.md' 'sort --output=README.md x' 'uniq x README.md' 'tree -o README.md' 'xxd x README.md' \
+  'git diff --output=README.md' 'git log -1 --output README.md'; do
+  run block $RV Bash "$c"
+done
+run allow $RV Bash 'sort README.md | uniq -c'
+run allow $RV Bash 'xxd README.md | head'
+
 echo "== git, меняющий проект, — запрет"
 for c in 'git add README.md' 'git commit -m fix' 'git push origin issue-1' 'git checkout -- README.md' \
   'git restore README.md' 'git reset --hard' 'git stash' 'git branch -D issue-1' 'git branch -f main HEAD~1' \

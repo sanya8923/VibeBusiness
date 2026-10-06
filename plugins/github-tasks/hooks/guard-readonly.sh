@@ -117,6 +117,7 @@ READERS=" cat less more head tail wc ls stat file grep egrep fgrep rg ag diff cm
 
 git_read_ok() {  # подкоманда и аргументы git — только чтение?
   local sub=$1; shift
+  case " $* " in *" --output"*|*" -o "*) case "$sub" in diff|log|show|format-patch) return 1 ;; esac ;; esac
   case "$sub" in
     status|log|diff|show|blame|grep|ls-files|ls-tree|ls-remote|rev-parse|rev-list|cat-file|describe|shortlog|merge-base|name-rev|for-each-ref|show-ref|count-objects|check-ignore|var|help|version|fetch) return 0 ;;
     reflog) case "${1:-show}" in show|-*) return 0 ;; esac; return 1 ;;
@@ -279,6 +280,18 @@ while IFS= read -r line; do
       continue ;;
   esac
 
+  # Читающие команды, которые умеют писать в файл флагом или вторым аргументом.
+  if true; then
+    npos=0; wout=""
+    for a in ${args[@]+"${args[@]}"}; do
+      case "$a" in -*) ;; *) npos=$((npos+1)) ;; esac
+      case "$cmd:$a" in
+        sort:-o*|sort:--output*|tree:-o|tree:-o*|file:-C) wout=$a ;;
+      esac
+    done
+    case "$cmd" in uniq|xxd) [ "$npos" -ge 2 ] && wout="второй аргумент — файл вывода" ;; esac
+    if [ -n "$wout" ] && [ "$here_project" = 1 ]; then deny "$cmd пишет в файл ($wout)."; fi
+  fi
   case "$READERS" in *" $cmd "*) continue ;; esac
 
   # Файловые команды с путями только вне проекта (mkdir временной папки из проекта) — можно.
