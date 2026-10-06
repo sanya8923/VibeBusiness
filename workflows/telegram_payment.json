@@ -481,7 +481,7 @@
             "text": "тест"
           }
         },
-        "webhookUrl": "https://n8n.vibe-business.space/webhook/8378545243:AAGfOT8-GczWvadCKt4XmUN1g_D8oPrHbRs/webhook",
+        "webhookUrl": "https://n8n.vibe-business.space/webhook/<BOT_TOKEN>/webhook",
         "executionMode": "production"
       }
     ]
