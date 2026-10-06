@@ -185,8 +185,9 @@ subst_value() {  # слова команды
 }
 
 # Путь без «.» и «..», с раскрытием ссылок (каталогов и самого файла; на macOS /tmp — это
-# /private/tmp), переменных из этой команды, $TMPDIR, $HOME и ~. Неизвестная переменная
-# в начале пути — печатает «?» (путь неизвестен).
+# /private/tmp), переменных из этой команды, $TMPDIR, $HOME и ~, с настоящим регистром
+# существующих каталогов. Неизвестная переменная в начале пути — печатает «?» (путь
+# неизвестен).
 norm() {
   local p=$1 base=$2 out="" part head tail v name rest n
   p=$(expand_value "$p"); [ "$p" = "?" ] && { echo "?"; return; }
@@ -203,7 +204,9 @@ norm() {
     while [ "$head" != / ] && [ ! -d "$head" ]; do
       tail="/${head##*/}$tail"; head=${head%/*}; [ -n "$head" ] || head=/
     done
-    head=$(cd -P "$head" 2>/dev/null && pwd) || head=/
+    # /bin/pwd -P, а не встроенный pwd: на macOS встроенный отдаёт регистр, как набрали
+    # (Tools/VB-Bot), а git и файловая система — настоящий (tools/vb-bot).
+    head=$(cd -P "$head" 2>/dev/null && { /bin/pwd -P 2>/dev/null || pwd -P; }) || head=/
     [ "$head" = / ] && head=""
     p="$head$tail"
     # последний элемент — ссылка на файл: идём по ней

@@ -35,7 +35,10 @@ description: Используй, когда просят «настрой зад
    - force push и `git add -A`/`.`/`-u`, `git commit -a` запрещены всегда, во всём
      репозитории — и с `paths`;
    - пути — от корня репозитория, папкой (`tools/bot/`) или файлом; `.` в списке значит
-     «весь репозиторий».
+     «весь репозиторий»;
+   - предложи внести в `paths` и сам `.claude/github-tasks.json`: иначе настройки (в том
+     числе `"hooks": false` и сам список `paths`) можно поменять коммитом прямо в основную
+     ветку мимо PR.
 4. **Запиши `.claude/github-tasks.json`** — только согласованные поля. Образец —
    `${CLAUDE_PLUGIN_ROOT}/templates/github-tasks.json`.
 5. **Запусти механику:** `bash "${CLAUDE_PLUGIN_ROOT}/scripts/setup.sh"`. Скрипт заводит

@@ -157,6 +157,48 @@ run block "$F" 'git push origin feature:main'
 run allow "$F" 'git push -u origin feature'
 reset_main
 
+echo "== регистр путей (приёмка #36)"
+cfg '{"paths": ["svc/", "lib/core"]}'
+if [ -d "$R/SVC" ] && [ "$(git -C "$R" config --bool core.ignorecase)" = true ]; then
+  echo "-- файловая система не различает регистр: путь в другом регистре — та же папка"
+  run block "$R" 'cd SVC && git add a.txt && git commit -q -m x'
+  run block "$R" 'cd Svc && git add a.txt && cd .. && git commit -m x'
+  run block "$R" 'git add Svc/NEW.txt && git commit -q -m x'
+  run block "$R" 'git -C SVC add a.txt && git commit -q -m x'
+  run block "$R" 'cd Svc && git commit -q -m x a.txt'
+  run block "$R" 'git add LIB/Core/x.py && git commit -m x'
+  run block "$R" 'git add lib/core/X.PY && git commit -m x'
+  run allow "$R" 'cd DOCS && git add a.md && git commit -m x'
+  run allow "$R" 'git add LIB/other.txt && git commit -m x'
+  cfg '{"paths": ["SVC", "Lib/Core/"]}'
+  run block "$R" 'git add svc/a.txt && git commit -m x'
+  run block "$R" 'git add lib/core/x.py && git commit -m x'
+  edit svc/a.txt; g -C "$R" add svc/a.txt
+  run block "$R" 'git commit -m x'
+  g -C "$R" commit -q -m svc svc/a.txt
+  run block "$R" 'git push origin main'
+  reset_main
+  cfg '{"paths": ["svc/", "lib/core"]}'
+else
+  echo "-- пропущено: файловая система различает регистр"
+fi
+echo "-- особый разбор путей (--icase-pathspecs, --glob-pathspecs) — состав не вычислить"
+run block "$R" 'git --icase-pathspecs add SVC/a.txt && git commit -q -m x'
+run block "$R" 'GIT_ICASE_PATHSPECS=1 git add SVC/a.txt && git commit -q -m x'
+run block "$R" 'export GIT_ICASE_PATHSPECS=1; git add SVC/a.txt && git commit -q -m x'
+run block "$R" 'GIT_ICASE_PATHSPECS=1 git commit -q -m x SVC/a.txt'
+run block "$R" 'git --glob-pathspecs add docs/a.md && git commit -m x'
+run block "$R" 'GIT_GLOB_PATHSPECS=1 git commit -m x'
+run block "$R" 'export GIT_GLOB_PATHSPECS=1 && git add docs/a.md && git commit -m x'
+run block "$R" 'GIT_ICASE_PATHSPECS=1 git push origin main'
+run allow "$R" 'git add docs/a.md && git commit -m x'
+
+echo "-- файл настроек в paths (рекомендация PROCESS.md)"
+run allow "$R" 'git add .claude/github-tasks.json && git commit -m x'
+cfg '{"paths": [".claude/github-tasks.json", "svc/"]}'
+run block "$R" 'git add .claude/github-tasks.json && git commit -m x'
+run allow "$R" 'git add docs/a.md && git commit -m x'
+
 echo "== base_branch: та же логика для неё"
 g -C "$R" branch -q dev origin/main 2>/dev/null; g -C "$R" push -q origin dev
 cfg '{"base_branch": "dev", "paths": ["svc"]}'

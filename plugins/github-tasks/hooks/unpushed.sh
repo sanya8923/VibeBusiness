@@ -20,7 +20,8 @@ root=$(hk_root "$CWD")
 # основной ветке, и незапушенное там к задачам не относится. Поэтому в основной копии
 # считаем только коммиты, которые трогают папки процесса. Рабочие копии задач — целиком.
 PSPEC=()
-while IFS= read -r p; do [ -n "$p" ] && PSPEC+=(":(top)$p"); done < <(hk_paths "$root")
+mg=top; [ "$(git -C "$root" config --bool core.ignorecase 2>/dev/null)" = true ] && mg=top,icase
+while IFS= read -r p; do [ -n "$p" ] && PSPEC+=(":($mg)$p"); done < <(hk_paths "$root")
 
 notes=""
 while IFS= read -r line; do

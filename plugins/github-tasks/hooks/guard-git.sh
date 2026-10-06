@@ -86,22 +86,35 @@ current_branch() {  # каталог репозитория
 # push: пути из git add/rm/mv (ADD_TOP/ADD_REL — рабочая копия и путь от её корня, «?» —
 # путь неизвестен), рабочие копии, где индекс меняется непредсказуемо (IDXU), и
 # репозитории, где ветки сдвигаются (DIRTY). Чего не вычислить — то запрещается.
-PC_ROOT=(); PC_VAL=()   # кэш поля paths по корню репозитория
+PC_ROOT=(); PC_VAL=(); PC_IC=()   # кэш поля paths и core.ignorecase по корню репозитория
 PATHS=(); PSPEC=()      # папки процесса текущего репозитория и они же как pathspec git
+ICASE=0                 # файловая система не различает регистр (core.ignorecase=true)
 ADD_TOP=(); ADD_REL=(); IDXU=(); DIRTY=()
 
-load_paths() {  # корень репозитория → PATHS, PSPEC
-  local k v="" found=0 line
-  PATHS=(); PSPEC=()
+load_paths() {  # корень репозитория → PATHS, PSPEC, ICASE
+  local k v="" ic=0 found=0 line
+  PATHS=(); PSPEC=(); ICASE=0
   for ((k = 0; k < ${#PC_ROOT[@]}; k++)); do
-    [ "${PC_ROOT[$k]}" = "$1" ] && { v=${PC_VAL[$k]}; found=1; break; }
+    [ "${PC_ROOT[$k]}" = "$1" ] && { v=${PC_VAL[$k]}; ic=${PC_IC[$k]}; found=1; break; }
   done
-  if [ "$found" = 0 ]; then v=$(hk_paths "$1"); PC_ROOT+=("$1"); PC_VAL+=("$v"); fi
+  if [ "$found" = 0 ]; then
+    v=$(hk_paths "$1")
+    [ -n "$v" ] && [ "$(git -C "$1" config --bool core.ignorecase 2>/dev/null)" = true ] && ic=1
+    PC_ROOT+=("$1"); PC_VAL+=("$v"); PC_IC+=("$ic")
+  fi
   [ -n "$v" ] || return 0
+  ICASE=$ic
   while IFS= read -r line; do
     [ -n "$line" ] || continue
-    PATHS+=("$line"); PSPEC+=(":(top)$line")
+    PATHS+=("$line")
+    if [ "$ICASE" = 1 ]; then PSPEC+=(":(top,icase)$line"); else PSPEC+=(":(top)$line"); fi
   done <<<"$v"
+}
+
+# Строка для сравнения путей: при core.ignorecase=true — в нижнем регистре (как git,
+# только латиница).
+fold() {
+  if [ "$ICASE" = 1 ]; then printf '%s' "$1" | LC_ALL=C tr 'A-Z' 'a-z'; else printf '%s' "$1"; fi
 }
 
 in_list() {  # значение элементы…
@@ -124,10 +137,10 @@ lit_prefix() {
 # содержит её (git add tools задевает tools/vb-hub-bot).
 spec_hits() {
   local a b
-  a=$(lit_prefix "$1")
+  a=$(fold "$(lit_prefix "$1")")
   { [ -z "$a" ] || [ "$a" = . ]; } && return 0
   for b in "${PATHS[@]}"; do
-    b=$(lit_prefix "$b")
+    b=$(fold "$(lit_prefix "$b")")
     [ -z "$b" ] && return 0
     case "$a/" in "$b"/*) return 0 ;; esac
     case "$b/" in "$a"/*) return 0 ;; esac
@@ -181,7 +194,7 @@ commit_paths_check() {
   local br=$1 a r k hit="" why="" out
   if [ "$top" = "?" ]; then why="не удалось определить рабочую копию"
   elif [ "$odd" = 1 ] || [ "$c_odd" = 1 ]; then
-    why="пути коммита берутся из файла, stdin (xargs), интерактивного выбора (-p) или другого индекса (GIT_INDEX_FILE, --git-dir)"
+    why="пути коммита берутся из файла, stdin (xargs), интерактивного выбора (-p), другого индекса (GIT_INDEX_FILE, --git-dir) или особого разбора путей (--icase-pathspecs, --glob-pathspecs)"
   else
     for a in ${c_specs[@]+"${c_specs[@]}"}; do
       r=$(rel_spec "$a" "$gitdir" "$top")
@@ -230,7 +243,7 @@ push_paths_check() {
   tr="refs/remotes/$rem/$dst"
   if in_list "$root" ${DIRTY[@]+"${DIRTY[@]}"}; then
     why="раньше в этой же команде ветки сдвигаются (commit не в эту ветку, merge, rebase, reset, cherry-pick …), и отправляемые коммиты заранее не известны"
-  elif [ "$odd" = 1 ]; then why="команда идёт через xargs или с другим каталогом git (--git-dir, GIT_DIR)"
+  elif [ "$odd" = 1 ]; then why="команда идёт через xargs, с другим каталогом git (--git-dir) или особым разбором путей (--icase-pathspecs)"
   elif ! git -C "$gitdir" rev-parse -q --verify "$tr^{commit}" >/dev/null 2>&1; then
     why="в локальной копии нет $rem/$dst — не с чем сравнить отправляемые коммиты"
   elif ! git -C "$gitdir" rev-parse -q --verify "$src^{commit}" >/dev/null 2>&1; then
@@ -353,6 +366,8 @@ while IFS= read -r line; do
       -C) d=$(norm "${w[$((i+1))]:-.}" "$curdir"); [ "$d" = "?" ] && d=$CWD; gitdir=$d; i=$((i+2)) ;;
       --git-dir|--work-tree) godd=1; i=$((i+2)) ;;
       --git-dir=*|--work-tree=*) godd=1; i=$((i+1)) ;;
+      # пути без учёта регистра или как шаблоны: хук сравнивает их иначе, чем git
+      --icase-pathspecs|--glob-pathspecs) godd=1; i=$((i+1)) ;;
       -c|--namespace|--exec-path) i=$((i+2)) ;;
       *) i=$((i+1)) ;;
     esac
@@ -378,13 +393,16 @@ while IFS= read -r line; do
   top="?"; odd=$godd
   if [ ${#PATHS[@]} -gt 0 ]; then
     t=$(git -C "$gitdir" rev-parse --show-toplevel 2>/dev/null) && top=$(norm "$t" /)
+    # Другой индекс или каталог git, пути без учёта регистра или как шаблоны — перед git,
+    # через export раньше в команде или уже в окружении сессии.
     for ((k = 0; k < gi; k++)); do
-      case "${w[$k]}" in GIT_DIR=*|GIT_WORK_TREE=*|GIT_INDEX_FILE=*|GIT_COMMON_DIR=*|GIT_OBJECT_DIRECTORY=*) odd=1 ;; esac
+      case "${w[$k]}" in GIT_DIR=*|GIT_WORK_TREE=*|GIT_INDEX_FILE=*|GIT_COMMON_DIR=*|GIT_OBJECT_DIRECTORY=*|GIT_ICASE_PATHSPECS=*|GIT_GLOB_PATHSPECS=*) odd=1 ;; esac
       [ "${w[$k]##*/}" = xargs ] && odd=1   # аргументы придут из stdin
     done
     for t in ${VARN[@]+"${VARN[@]}"}; do
-      case "$t" in GIT_DIR|GIT_WORK_TREE|GIT_INDEX_FILE|GIT_COMMON_DIR|GIT_OBJECT_DIRECTORY) odd=1 ;; esac
+      case "$t" in GIT_DIR|GIT_WORK_TREE|GIT_INDEX_FILE|GIT_COMMON_DIR|GIT_OBJECT_DIRECTORY|GIT_ICASE_PATHSPECS|GIT_GLOB_PATHSPECS) odd=1 ;; esac
     done
+    [ -n "${GIT_ICASE_PATHSPECS:-}${GIT_GLOB_PATHSPECS:-}" ] && odd=1
   fi
 
   case "$sub" in
