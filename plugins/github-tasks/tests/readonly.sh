@@ -111,7 +111,23 @@ for c in 'ROOT=$(git rev-parse --show-toplevel); echo x >> "$ROOT/README.md"' \
   run block $RV Bash "$c"
 done
 
+echo "== пятая приёмка: подстановка в начале пути записи, cd \"\$OLDPWD\""
+for c in 'echo x >> "$(git rev-parse --show-toplevel)/README.md"' 'printf "x\n" > "$(pwd)/README.md"' \
+  'cat /tmp/fix.md > "$(git rev-parse --show-toplevel)/hello.txt"' \
+  'F="$(git rev-parse --show-toplevel)/README.md"; cd "$TMPDIR" && echo x >> "$F"' \
+  'F=$(git rev-parse --show-toplevel)/README.md; cd "$TMPDIR" && cp /tmp/f "$F"' \
+  'cd "$TMPDIR" && cd "$OLDPWD" && rm hello.txt' 'echo x > "$(cat path.txt)/a"'; do
+  run block $RV Bash "$c"
+done
+run block $SC Bash 'echo x >> "$(git rev-parse --show-toplevel)/README.md"'
+
 echo "== обычная работа приёмщика — разрешено"
+for c in 'REPO_DIR="$(mktemp -d)/repo" && git clone -b main https://github.com/o/r.git "$REPO_DIR" && cd "$REPO_DIR" && npm test' \
+  'cp README.md "$(mktemp -d)/readme"' 'while IFS= read -r f; do wc -l "$f"; done < <(git ls-files)' \
+  'git diff > "$(mktemp)"' 'cd "$TMPDIR" && cd "$OLDPWD" && git status'; do
+  run allow $RV Bash "$c"
+done
+run allow $SC Bash 'while IFS= read -r f; do wc -l "$f"; done < <(git ls-files)'
 for c in 'D="$TMPDIR/rv" && git clone -b main https://github.com/o/r.git "$D" && cd "$D" && npm ci && npm test' \
   'cd "$(mktemp -d)" && git clone -q https://github.com/o/r.git c && cd c && npm test' \
   'diff <(git show HEAD~1:README.md) README.md' 'W=$(mktemp -d); echo v > "$W/verdict.md"; gh pr comment 5 -F "$W/verdict.md"'; do

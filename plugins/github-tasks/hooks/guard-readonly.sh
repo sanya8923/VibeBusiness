@@ -74,6 +74,9 @@ var_get() {
 expand_value() {
   local p=$1 name rest v
   case "$p" in
+    $'\004'*)   # слово начинается с подстановки $(…): её значение + хвост
+      [ "$subval" = "?" ] && { echo "?"; return; }
+      echo "$subval${p#$'\004'}" ;;
     '$'*)
       name=$(printf '%s' "$p" | sed -E 's/^\$\{?([A-Za-z_][A-Za-z0-9_]*).*/\1/')
       rest=$(printf '%s' "$p" | sed -E 's/^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?//')
@@ -319,8 +322,7 @@ while IFS= read -r line; do
   if [ "$allassign" = 1 ]; then
     for t in "${w[@]}"; do
       v=${t#*=}
-      if [ "$v" = $'\004' ]; then v=$subval                            # VAR=$(…)
-      else v=$(expand_value "$v"); fi                                  # VAR="$TMPDIR/x"
+      v=$(expand_value "$v")                       # VAR=$(…)/x, VAR="$TMPDIR/x"
       VARN+=("${t%%=*}"); VARV+=("$v")
     done
     continue
@@ -331,7 +333,7 @@ while IFS= read -r line; do
   while [ "$i" -lt "$n" ]; do
     wi=${w[$i]}
     case "${wi##*/}" in
-      if|then|else|elif|fi|do|done|while|until|'!'|'{'|'}') ;;
+      if|then|else|elif|fi|do|done|while|until|'!'|'{'|'}'|$'\004') ;;
       for|case|esac|in|select|function) i=$n; break ;;   # заголовок цикла или case — не команда
       time|builtin|exec|nohup|nice|sudo|doas|xargs|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer|arch) wrapper=${wi##*/} ;;
       command)
@@ -353,12 +355,12 @@ while IFS= read -r line; do
   case "$cmd" in
     cd|pushd)
       if [ "$na" = 0 ]; then t=$HOME
-      elif [ "${args[0]}" = $'\004' ]; then t=$subval                       # cd "$(…)"
       else t=${args[0]}; fi
       [ "$t" = - ] && t=$prevdir
+      # цель раскрываем до смены prevdir: иначе cd "$OLDPWD" раскроется в новый каталог
+      d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
       [ "$cmd" = pushd ] && pstack+=("$curdir")
       prevdir=$curdir
-      d=$(norm "$t" "$curdir"); [ "$d" = "?" ] && d=$CWD
       curdir=$d; continue ;;
     popd)
       if [ ${#pstack[@]} -gt 0 ]; then
