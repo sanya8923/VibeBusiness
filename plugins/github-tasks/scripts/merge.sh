@@ -20,7 +20,7 @@ info=$(gh pr view "$PR" -R "$R" --json state,baseRefName,headRefName,isCrossRepo
   -q '[.state, .baseRefName, .headRefName, (.isCrossRepository | tostring)] | join("\u001f")')
 IFS=$'\x1f' read -r state base head cross <<<"$info"
 [ "$state" = OPEN ] || gt_die "PR #$PR не открыт (состояние: $state)"
-[ "$base" = "$BASE" ] || gt_die "PR #$PR идёт в «$base», а базовая ветка проекта — «$BASE»"
+[ "$base" = "$BASE" ] || gt_die "PR #$PR идёт в «${base}», а базовая ветка проекта — «${BASE}»"
 # PR из форка процесс не ведёт: ветка задачи живёт в этом репозитории. Такой PR сливает
 # человек вручную, после собственной проверки.
 [ "$cross" = false ] || gt_die "PR #$PR пришёл из другого репозитория (форка) — сливать его скриптом нельзя"
@@ -44,7 +44,8 @@ echo "PR #$PR слит в $BASE"
 if [ -n "$issue" ]; then
   if [ "$BASE" != "$(gt_default_branch)" ]; then
     gh issue close "$issue" -R "$R" \
-      -c "Принято и слито в \`$BASE\` через #$PR. GitHub закрывает задачи по «Closes» только при слиянии в основную ветку, поэтому задачу закрыл скрипт слияния." >/dev/null 2>&1
+      -c "Принято и слито в \`$BASE\` через #$PR. GitHub закрывает задачи по «Closes» только при слиянии в основную ветку, поэтому задачу закрыл скрипт слияния." >/dev/null 2>&1 \
+      || gt_die "PR #$PR слит, но закрыть задачу #$issue не удалось — закрой её вручную"
     echo "задача #$issue закрыта"
   fi
   # У закрытой задачи метка статуса больше не нужна — иначе на ней навсегда висит «in-review».

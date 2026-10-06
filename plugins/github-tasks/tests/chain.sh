@@ -17,7 +17,7 @@ step "claim вне git-репозитория (ожидаем отказ)"
 (cd / && /bin/bash "$P/claim.sh" "$N"; echo "код $?")
 step "claim в репозитории без файла настроек (ожидаем отказ)"
 NC=$(mktemp -d) && git -C "$NC" init -q && (cd "$NC" && /bin/bash "$P/claim.sh" "$N"; echo "код $?"); rm -rf "$NC"
-step "claim из подпапки репозитория — рабочая копия создаётся от корня"
+step "worktree из подпапки репозитория — рабочая копия создаётся от корня"
 (cd "$S/sandbox/.claude" && /bin/bash "$P/worktree.sh" 999999 >/dev/null 2>&1; echo "код $?"; git -C "$S/sandbox" worktree remove "$S/sandbox/.claude/worktrees/issue-999999" 2>/dev/null; git -C "$S/sandbox" branch -q -D issue-999999 2>/dev/null)
 
 step "claim"; CLAUDE_CODE_SESSION_ID=chain /bin/bash "$P/claim.sh" "$N"; echo "код $? → $(lbl $N)"
@@ -35,6 +35,12 @@ git -C "$WT" add hello.txt && git -C "$WT" commit -q -m "hello.txt"
 printf 'Что сделано: файл hello.txt.\nЧем проверено: cat hello.txt → привет.\n' > "$S/report.md"
 step "open-pr"; PRURL=$(/bin/bash "$P/open-pr.sh" "$N" "$S/report.md" | tail -1); PR=${PRURL##*/}; echo "PR: $PRURL → $(lbl $N)"
 echo "тело PR, первая строка: $(gh pr view $PR -R $R --json body -q .body | head -1)"
+
+step "merge PR в другую базу (ожидаем отказ с понятным текстом)"
+git -C "$S/sandbox" push -q origin "origin/main:refs/heads/gt-wrong-base" 2>/dev/null
+gh pr edit "$PR" -R "$R" --base gt-wrong-base >/dev/null
+/bin/bash "$P/merge.sh" "$PR"; echo "код $?"
+gh pr edit "$PR" -R "$R" --base main >/dev/null; gh api -X DELETE "repos/$R/git/refs/heads/gt-wrong-base" >/dev/null 2>&1
 
 step "merge без вердикта (ожидаем отказ)"; /bin/bash "$P/merge.sh" "$PR"; echo "код $?"
 gh pr comment "$PR" -R "$R" -b "Вердикт: Возврат
