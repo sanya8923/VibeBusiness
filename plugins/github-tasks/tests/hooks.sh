@@ -105,7 +105,22 @@ run block "$SB" 'git push origin'
 run block "$WT" 'git checkout main && git merge hooktest && git push'
 run block "$WT" 'git push --all origin'
 
+echo "== после третьей приёмки (#16)"
+run block "$WT" 'git push origin :'
+run block "$WT" "git push origin 'refs/heads/*:refs/heads/*'"
+run block "$WT" 'arch -arm64 git add -A'
+run block "$SB" 'git checkout hooktest README.md && git commit -m x'
+run block "$WT" 'sudo -u nobody git add -A'
+run block "$WT" 'nice -n 5 timeout 30 git push -f'
+run block "$WT" 'timeout --signal=KILL 30s git add -A'
+run block "$WT" 'env -i PATH=/usr/bin git add -A'
+run block "$WT" 'xargs -I {} git add -A'
+
 echo "== должны проходить"
+run allow "$SB" 'git push origin --tags'
+run allow "$WT" 'xargs -n1 echo git push --force'
+run allow "$WT" 'timeout 60 grep "git add -A" file.txt'
+run allow "$WT" 'git checkout hooktest README.md && git status'
 run allow "$WT" 'cat <<\EOF
 git push --force
 EOF'
