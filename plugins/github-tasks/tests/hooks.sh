@@ -105,7 +105,56 @@ run block "$SB" 'git push origin'
 run block "$WT" 'git checkout main && git merge hooktest && git push'
 run block "$WT" 'git push --all origin'
 
+echo "== после третьей приёмки (#16)"
+run block "$WT" 'git push origin :'
+run block "$WT" "git push origin 'refs/heads/*:refs/heads/*'"
+run block "$WT" 'arch -arm64 git add -A'
+run block "$SB" 'git checkout hooktest README.md && git commit -m x'
+run block "$WT" 'sudo -u nobody git add -A'
+run block "$WT" 'nice -n 5 timeout 30 git push -f'
+run block "$WT" 'timeout --signal=KILL 30s git add -A'
+run block "$WT" 'env -i PATH=/usr/bin git add -A'
+run block "$WT" 'xargs -I {} git add -A'
+
+echo "== перенаправления и длинные флаги обёрток (вторая приёмка #16)"
+run block "$WT" 'git checkout main 2>&1 && git commit -m x'
+run block "$WT" 'git checkout main 2>/dev/null && git commit -m x'
+run block "$WT" 'git switch main >/dev/null 2>&1; git commit -m x'
+run block "$SB" 'git push origin 2>&1'
+run block "$SB" 'git push origin >/dev/null'
+run block "$WT" 'timeout --signal KILL 30 git push --force'
+run block "$WT" 'sudo --user nobody git add -A'
+run block "$WT" 'env --unset FOO git add -A'
+run block "$WT" 'stdbuf --output L git push -f'
+
+echo "== перенаправления в разборщике (третья приёмка #16)"
+run block "$WT" 'git commit -m "> цитата" -a'
+run block "$WT" 'git commit -m "<тип>: описание" -a'
+run block "$WT" 'git add ">" .'
+run block "$WT" 'git commit -F - <<< "сообщение" -a'
+run block "$WT" 'git add "<" -A'
+run block "$WT" 'git commit -m ">" -a'
+run block "$WT" 'git push origin ">" --force'
+run block "$WT" 'jq . <<< "{}"
+git push --force'
+run block "$WT" 'read x <<< "$y"
+git add -A'
+run block "$WT" '2>&1 git add -A'
+run block "$WT" 'git add -A 2>/dev/null'
+run block "$WT" 'git add >/dev/null -A'
+run block "$WT" 'git checkout main &>/dev/null && git commit -m x'
+
 echo "== должны проходить"
+run allow "$WT" 'git commit -m "> цитата"'
+run allow "$WT" 'git commit -F - <<< "-a в тексте"'
+run allow "$WT" 'git log --format=">%s<" -3'
+run allow "$WT" 'git push -u origin hooktest >/dev/null 2>&1'
+run allow "$WT" 'git push -u origin hooktest 2>&1'
+run allow "$WT" 'git checkout hooktest 2>&1 && git commit -m x'
+run allow "$SB" 'git push origin --tags'
+run allow "$WT" 'xargs -n1 echo git push --force'
+run allow "$WT" 'timeout 60 grep "git add -A" file.txt'
+run allow "$WT" 'git checkout hooktest README.md && git status'
 run allow "$WT" 'cat <<\EOF
 git push --force
 EOF'
