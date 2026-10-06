@@ -20,7 +20,7 @@ BR="issue-$N"
 # .gitignore оставила бы незакоммиченное изменение в основной копии. В .gitignore
 # её вносит настройка проекта.
 if ! git -C "$ROOT" check-ignore -q .claude/worktrees/x 2>/dev/null; then
-  echo ".claude/worktrees/" >> "$(git -C "$ROOT" rev-parse --git-common-dir)/info/exclude"
+  echo ".claude/worktrees/" >> "$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)/info/exclude"
 fi
 
 if [ -d "$WT" ]; then

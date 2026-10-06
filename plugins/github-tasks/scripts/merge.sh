@@ -16,14 +16,19 @@ gt_require_config
 R=$(gt_repo)
 BASE=$(gt_base)
 
-info=$(gh pr view "$PR" -R "$R" --json state,baseRefName,headRefName \
-  -q '[.state, .baseRefName, .headRefName] | @tsv')
-IFS=$'\t' read -r state base head <<<"$info"
+info=$(gh pr view "$PR" -R "$R" --json state,baseRefName,headRefName,isCrossRepository \
+  -q '[.state, .baseRefName, .headRefName, (.isCrossRepository | tostring)] | join("\u001f")')
+IFS=$'\x1f' read -r state base head cross <<<"$info"
 [ "$state" = OPEN ] || gt_die "PR #$PR не открыт (состояние: $state)"
 [ "$base" = "$BASE" ] || gt_die "PR #$PR идёт в «$base», а базовая ветка проекта — «$BASE»"
+# PR из форка процесс не ведёт: ветка задачи живёт в этом репозитории. Такой PR сливает
+# человек вручную, после собственной проверки.
+[ "$cross" = false ] || gt_die "PR #$PR пришёл из другого репозитория (форка) — сливать его скриптом нельзя"
 
+# Вердикт засчитывается только от тех, у кого есть право записи в репозиторий: в
+# открытом репозитории комментарий «Вердикт: Принято» может написать кто угодно.
 verdict=$(gh pr view "$PR" -R "$R" --json comments \
-  -q '[.comments[].body | select(startswith("Вердикт:"))] | last // ""')
+  -q '[.comments[] | select(.authorAssociation == "OWNER" or .authorAssociation == "MEMBER" or .authorAssociation == "COLLABORATOR") | .body | select(startswith("Вердикт:"))] | last // ""')
 case "$verdict" in
   "Вердикт: Принято"*) ;;
   "") gt_die "в PR #$PR нет вердикта приёмки — сначала приёмка" ;;
@@ -37,13 +42,16 @@ gh pr merge "$PR" -R "$R" --merge >/dev/null
 echo "PR #$PR слит в $BASE"
 
 if [ -n "$issue" ]; then
-  # У закрытой задачи метка статуса больше не нужна — иначе на ней навсегда висит «in-review».
-  "$(dirname "$0")/status.sh" "$issue" none >/dev/null
   if [ "$BASE" != "$(gt_default_branch)" ]; then
     gh issue close "$issue" -R "$R" \
-      -c "Принято и слито в \`$BASE\` через #$PR. GitHub закрывает задачи по «Closes» только при слиянии в основную ветку, поэтому задачу закрыл скрипт слияния." >/dev/null
+      -c "Принято и слито в \`$BASE\` через #$PR. GitHub закрывает задачи по «Closes» только при слиянии в основную ветку, поэтому задачу закрыл скрипт слияния." >/dev/null 2>&1
     echo "задача #$issue закрыта"
   fi
+  # У закрытой задачи метка статуса больше не нужна — иначе на ней навсегда висит «in-review».
+  "$(dirname "$0")/status.sh" "$issue" none >/dev/null || echo "метку статуса с задачи #$issue снять не удалось" >&2
 fi
 
-gh api -X DELETE "repos/$R/git/refs/heads/$head" >/dev/null 2>&1 && echo "ветка $head удалена" || true
+# Удаляем только ветку задачи этого PR: «issue-N» с номером из «Closes».
+if [ -n "$issue" ] && [ "$head" = "issue-$issue" ]; then
+  gh api -X DELETE "repos/$R/git/refs/heads/$head" >/dev/null 2>&1 && echo "ветка $head удалена" || true
+fi

@@ -13,8 +13,12 @@ step() { echo; echo "== $*"; }
 url=$(gh issue create -R "$R" -t "Цепочка: добавить файл hello.txt" -b "Тест цепочки скриптов" -l ready); N=${url##*/}
 step "задача #$N создана: $(lbl $N)"
 
-step "claim без файла настроек в чужом каталоге (ожидаем отказ)"
-(cd /tmp && /bin/bash "$P/claim.sh" "$N"; echo "код $?")
+step "claim вне git-репозитория (ожидаем отказ)"
+(cd / && /bin/bash "$P/claim.sh" "$N"; echo "код $?")
+step "claim в репозитории без файла настроек (ожидаем отказ)"
+NC=$(mktemp -d) && git -C "$NC" init -q && (cd "$NC" && /bin/bash "$P/claim.sh" "$N"; echo "код $?"); rm -rf "$NC"
+step "claim из подпапки репозитория — рабочая копия создаётся от корня"
+(cd "$S/sandbox/.claude" && /bin/bash "$P/worktree.sh" 999999 >/dev/null 2>&1; echo "код $?"; git -C "$S/sandbox" worktree remove "$S/sandbox/.claude/worktrees/issue-999999" 2>/dev/null; git -C "$S/sandbox" branch -q -D issue-999999 2>/dev/null)
 
 step "claim"; CLAUDE_CODE_SESSION_ID=chain /bin/bash "$P/claim.sh" "$N"; echo "код $? → $(lbl $N)"
 step "повторный claim той же задачи (ожидаем 3)"; /bin/bash "$P/claim.sh" "$N"; echo "код $?"

@@ -22,8 +22,9 @@ STALE=${GT_CLAIM_STALE_SECONDS:-600}
 MARK='<!-- github-tasks:claim '
 
 info=$(gh issue view "$N" -R "$R" --json state,labels,assignees \
-  -q '[.state, ([.labels[].name] | join(",")), (.assignees | length)] | @tsv')
-IFS=$'\t' read -r state labels assignees <<<"$info"
+  -q '[.state, ([.labels[].name] | join(",")), (.assignees | length | tostring)] | join("\u001f")')
+# Разделитель — не пробельный символ: иначе read склеит пустое поле меток с соседним.
+IFS=$'\x1f' read -r state labels assignees <<<"$info"
 [ "$state" = OPEN ] || gt_busy "задача #$N закрыта"
 [ "$assignees" = 0 ] || gt_busy "у задачи #$N уже есть исполнитель"
 case ",$labels," in
