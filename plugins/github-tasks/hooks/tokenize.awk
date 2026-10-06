@@ -16,15 +16,22 @@
 #   - ${…} остаётся частью слова;
 #   - перенаправления ([N]>, >>, >|, [N]<, &>, &>>, [N]>&M, <<<) распознаются только вне
 #     кавычек и выводятся отдельным словом с пометкой \002 в начале: «\002>файл».
-#     Запреты git такие слова пропускают, хук «только чтение» по ним видит запись.
+#     Запреты git такие слова пропускают, хук «только чтение» по ним видит запись;
+#   - границы подоболочки ( … ) и подстановки выводятся отдельными строками «\003(» и
+#     «\003)»: cd внутри них не действует снаружи, хуки восстанавливают каталог; на месте
+#     самой подстановки в слове стоит пометка \004.
 # Это не полный разбор bash, а достаточный для запретов: ошибиться он должен в сторону
 # «увидеть лишнюю команду», а не «пропустить настоящую».
 
-BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2) }
+BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2); SM = sprintf("%c", 3); SB = sprintf("%c", 4) }
 { src = src $0 "\n" }
 
 function flush_word() {
-  if (inword) { seg = (seg == "" ? word : seg US word) }
+  if (inword) {
+    # слово — цель перенаправления, начавшаяся с подстановки: пометить оператором
+    if (rdop != "") { word = RD rdop word; rdop = "" }
+    seg = (seg == "" ? word : seg US word)
+  }
   word = ""; inword = 0; wq = 0
 }
 function flush_seg() {
@@ -35,14 +42,17 @@ function flush_seg() {
 
 # Вложенная подстановка: сохранить внешнюю команду и начать разбор внутренней.
 function push(closer) {
-  sp++; S_seg[sp] = seg; S_word[sp] = word; S_q[sp] = q; S_wq[sp] = wq; S_cl[sp] = closer; S_pd[sp] = 0
-  seg = ""; word = ""; inword = 0; q = ""; wq = 0
+  print SM "("
+  sp++; S_seg[sp] = seg; S_word[sp] = word; S_q[sp] = q; S_wq[sp] = wq; S_cl[sp] = closer; S_pd[sp] = 0; S_rd[sp] = rdop
+  seg = ""; word = ""; inword = 0; q = ""; wq = 0; rdop = ""
 }
 # Конец подстановки: вывести внутреннюю команду и вернуться к внешней. Подстановка — часть
 # слова внешней команды (её текст неизвестен, поэтому слово просто продолжается).
 function pop() {
   flush_seg()
-  seg = S_seg[sp]; word = S_word[sp]; q = S_q[sp]; wq = S_wq[sp]; inword = 1; sp--
+  print SM ")"
+  # на месте подстановки в слове — пометка \004: слово «$(…)» не пустое и не теряется
+  seg = S_seg[sp]; word = S_word[sp] SB; q = S_q[sp]; wq = S_wq[sp]; rdop = S_rd[sp]; inword = 1; sp--
 }
 
 # Цель перенаправления: слово после оператора (кавычки снимаются). Выводится одним
@@ -52,17 +62,18 @@ function redirect(   t, ch, qq) {
   t = ""
   while (i <= n) {
     ch = substr(src, i, 1)
+    # цель начинается или продолжается подстановкой ($(…), `…`, <(…), >(…)): слово цели
+    # дособерёт основной цикл, а оператор пометит его при выводе (rdop)
+    if (substr(src, i, 2) == "$(" || ch == "`" || substr(src, i, 2) == "<(" || substr(src, i, 2) == ">(") {
+      flush_word(); word = t; inword = 1; rdop = op; return
+    }
     if (index(" \t\n;&|()<>", ch) > 0) break
-    # подстановка в цели: цель кончается, подстановку разбирает основной цикл
-    if (substr(src, i, 2) == "$(" || ch == "`") break
     if (ch == "'" || ch == "\"") {
       qq = ch; i++
       while (i <= n && substr(src, i, 1) != qq) {
         if (qq == "\"" && substr(src, i, 1) == "\\") { t = t substr(src, i + 1, 1); i += 2; continue }
         if (qq == "\"" && (substr(src, i, 2) == "$(" || substr(src, i, 1) == "`")) {
-          # продолжаем разбор основным циклом «внутри этих кавычек»
-          flush_word(); word = RD op t; inword = 1; flush_word()
-          q = "\""; inword = 1; return
+          flush_word(); word = t; inword = 1; rdop = op; q = "\""; return
         }
         t = t substr(src, i, 1); i++
       }
@@ -74,7 +85,7 @@ function redirect(   t, ch, qq) {
 }
 
 END {
-  n = length(src); sp = 0; q = ""; word = ""; inword = 0; seg = ""; ntags = 0
+  n = length(src); sp = 0; rdop = ""; q = ""; word = ""; inword = 0; seg = ""; ntags = 0
   i = 1
   while (i <= n) {
     c = substr(src, i, 1); nx = substr(src, i + 1, 1)
@@ -135,6 +146,8 @@ END {
       if (tag != "") { ntags++; tags[ntags] = tag; dashes[ntags] = dash }
       i = j; continue
     }
+    # подстановка процесса <(…) и >(…) — вложенная команда, как $(…)
+    if ((c == "<" || c == ">") && nx == "(") { i += 2; push(")"); continue }
     # перенаправление: [N]> [N]>> >| [N]< <> [N]>& <& &> &>>
     if (c == ">" || c == "<" || (c == "&" && nx == ">")) {
       # номер дескриптора — только цифры без кавычек вплотную к оператору: "5">x — не 5>x
@@ -164,11 +177,13 @@ END {
       continue
     }
     if (c == ")" && sp > 0 && S_cl[sp] == ")") {
-      if (S_pd[sp] > 0) { flush_seg(); S_pd[sp]--; i++; continue }   # конец подоболочки внутри
+      if (S_pd[sp] > 0) { flush_seg(); print SM ")"; S_pd[sp]--; i++; continue }   # конец подоболочки внутри
       i++; pop(); continue
     }
     if (c == "(" && sp > 0) S_pd[sp]++
-    if (index(";&|(){}", c) > 0) { flush_seg(); i++; continue }
+    if (c == "(") { flush_seg(); print SM "("; i++; continue }
+    if (c == ")") { flush_seg(); print SM ")"; i++; continue }
+    if (index(";&|{}", c) > 0) { flush_seg(); i++; continue }
 
     word = word c; inword = 1; i++
   }

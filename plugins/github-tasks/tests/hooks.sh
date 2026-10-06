@@ -166,6 +166,12 @@ run block "$WT" 'git commit -m \5>/dev/null -a'
 run block "$WT" 'echo "$( (git status && git add -A) )"'
 run block "$WT" 'x=$(git add -A)'
 
+echo "== cd внутри подоболочки и подстановки не действует снаружи"
+run block "$WT" '(cd /tmp && ls); git add -A'
+run block "$WT" '(cd /tmp && ls) && git push --force'
+run block "$WT" 'echo $(cd /tmp; pwd); git add -A'
+run allow "$WT" '(cd /tmp && git add -A)'
+
 echo "== должны проходить"
 run allow "$WT" 'git push -u origin "$(git branch --show-current)"'
 run allow "$WT" "git commit -m \"\$(cat <<'EOF'
