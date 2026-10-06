@@ -18,19 +18,19 @@
   иначе — `claude plugin uninstall` и снова `install`.
 - Сессии — `claude -p` из каталога репозитория. Одобрения человека заменяются фразой «план
   одобряю заранее». Журнал сессии пишется флагами `--output-format stream-json --verbose`
-  в файл `.jsonl`; вызовы инструментов в нём — строки с `"type":"tool_use"` (имя в
+  в файл `.jsonl` (флаги пишутся прямо в команде — так команды работают и в bash, и в zsh);
+  вызовы инструментов в нём — строки с `"type":"tool_use"` (имя в
   `name`, параметры в `input`), ответы — `"type":"tool_result"`. Готовые команды:
   ```
-  J='--output-format stream-json --verbose'
   # постановка и настройка
-  claude -p "/github-tasks:setup — проект настроек одобряю заранее" --allowedTools "Bash,Read,Edit,Write" $J > 1-setup.jsonl
-  claude -p "/github-tasks:task-new <замысел>. План одобряю заранее" --allowedTools "Bash,Read,Agent" $J > 2a.jsonl
+  claude -p "/github-tasks:setup — проект настроек одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > 1-setup.jsonl
+  claude -p "/github-tasks:task-new <замысел>. План одобряю заранее" --allowedTools "Bash,Read,Agent" --output-format stream-json --verbose > 2a.jsonl
   # полный цикл: приёмщику нужны Agent и SendMessage
-  claude -p "/github-tasks:cycle N — планы одобряю заранее" --allowedTools "Agent,Bash,Read,Edit,Write,SendMessage" $J > 2b.jsonl
+  claude -p "/github-tasks:cycle N — планы одобряю заранее" --allowedTools "Agent,Bash,Read,Edit,Write,SendMessage" --output-format stream-json --verbose > 2b.jsonl
   # исполнение, приёмка, проверка перед релизом
-  claude -p "/github-tasks:task-do N — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" $J > t.jsonl
-  claude -p "/github-tasks:review N" --allowedTools "Agent,Bash,Read" $J > r.jsonl
-  claude -p "/github-tasks:release-check" --allowedTools "Bash,Read" $J > rc.jsonl
+  claude -p "/github-tasks:task-do N — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > t.jsonl
+  claude -p "/github-tasks:review N" --allowedTools "Agent,Bash,Read" --output-format stream-json --verbose > r.jsonl
+  claude -p "/github-tasks:release-check" --allowedTools "Bash,Read" --output-format stream-json --verbose > rc.jsonl
   ```
 
 ## Шаги и что должно получиться
@@ -49,8 +49,8 @@
 3. **Параллельные сессии.**
    - **Гонка за одну задачу.** Две `task-do A` запускаются одновременно, в фоне:
      ```
-     claude -p "/github-tasks:task-do A — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" $J > ra.jsonl &
-     claude -p "/github-tasks:task-do A — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" $J > rb.jsonl &
+     claude -p "/github-tasks:task-do A — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > ra.jsonl &
+     claude -p "/github-tasks:task-do A — план одобряю заранее" --allowedTools "Bash,Read,Edit,Write" --output-format stream-json --verbose > rb.jsonl &
      wait
      ```
      Задачу берёт ровно одна. Признак настоящей гонки (сверки заявок): у проигравшей в
