@@ -1,0 +1,11 @@
+{
+  "name": "github-tasks",
+  "version": "0.1.0",
+  "description": "Процесс задач проекта с кодом на GitHub: задача → своя ветка у каждого агента → PR → независимая приёмка → слияние",
+  "author": {
+    "name": "Vibe Business",
+    "url": "https://vibe-business.space"
+  },
+  "repository": "https://github.com/sanya8923/VibeBusiness",
+  "license": "MIT"
+}
