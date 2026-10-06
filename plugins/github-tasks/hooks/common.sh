@@ -44,6 +44,50 @@ hk_base_branch() {
   sed -nE 's/.*"base_branch"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "$1/.claude/github-tasks.json" | head -1
 }
 
+# Папки процесса — поле paths из файла настроек, по строке на папку, относительно корня
+# репозитория, без «./» в начале и «/» в конце. Пустой вывод — процесс на весь
+# репозиторий: поля нет, список пуст, в нём есть «.» или «..», нестроковый элемент, файл
+# не читается или нет ни python3, ни node. При сомнении — весь репозиторий: это строже.
+hk_paths() {
+  local cfg="$1/.claude/github-tasks.json"
+  [ -f "$cfg" ] || return 0
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json, sys
+try:
+    v = json.load(open(sys.argv[1], encoding="utf-8")).get("paths")
+except Exception:
+    sys.exit(0)
+if isinstance(v, str): v = [v]
+if not isinstance(v, list): sys.exit(0)
+out = []
+for p in v:
+    if not isinstance(p, str) or "\n" in p: sys.exit(0)
+    p = p.strip()
+    while p.startswith("./") or p.startswith("/"): p = p[1:] if p.startswith("/") else p[2:]
+    p = p.rstrip("/")
+    if p in ("", ".") or ".." in p.split("/"): sys.exit(0)
+    out.append(p)
+if out: print("\n".join(out))' "$cfg" 2>/dev/null
+  elif command -v node >/dev/null 2>&1; then
+    node -e '
+let v;
+try { v = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")).paths; } catch (e) { process.exit(0); }
+if (typeof v === "string") v = [v];
+if (!Array.isArray(v)) process.exit(0);
+const out = [];
+for (let p of v) {
+  if (typeof p !== "string" || p.includes("\n")) process.exit(0);
+  p = p.trim();
+  while (p.startsWith("./") || p.startsWith("/")) p = p.startsWith("/") ? p.slice(1) : p.slice(2);
+  p = p.replace(/\/+$/, "");
+  if (p === "" || p === "." || p.split("/").includes("..")) process.exit(0);
+  out.push(p);
+}
+if (out.length) console.log(out.join("\n"));' "$cfg" 2>/dev/null
+  fi
+}
+
 # Основная ветка репозитория по origin/HEAD, без обращения к сети.
 hk_default_branch() {
   local ref
