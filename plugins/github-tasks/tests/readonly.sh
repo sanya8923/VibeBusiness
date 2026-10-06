@@ -100,6 +100,11 @@ for c in 'gh pr diff 5' 'gh pr view 5 --comments' 'gh pr -R o/r view 18' 'gh pr 
   'git -C "$TMPDIR/clone" checkout issue-4' "cd $TMPW && python3 -c 1 && bash run.sh && make test"; do
   run allow $RV Bash "$c"
 done
+run allow $RV Bash 'D=$(mktemp -d) && echo "$D"'
+run allow $RV Bash 'mktemp'
+run block $RV Bash 'mktemp ./new.XXXXXX'
+run block $RV Bash 'mktemp -d tmp.XXXXXX'
+run allow $RV Bash 'mktemp -t review'
 run allow $RV Read "$SB/README.md"
 
 echo "== основная сессия и другие агенты — хук не вмешивается"

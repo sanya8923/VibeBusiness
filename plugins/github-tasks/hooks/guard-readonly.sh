@@ -294,6 +294,21 @@ while IFS= read -r line; do
   fi
   case "$READERS" in *" $cmd "*) continue ;; esac
 
+  # mktemp: без шаблона, с -t или -p — файл во временной папке. Шаблон с путём — там,
+  # где указано; шаблон без пути (mktemp XXX, mktemp -d XXX) — в текущем каталоге.
+  if [ "$cmd" = mktemp ]; then
+    tmpflag=0
+    for a in ${args[@]+"${args[@]}"}; do case "$a" in -t|-p|--tmpdir*) tmpflag=1 ;; esac; done
+    for a in ${args[@]+"${args[@]}"}; do
+      case "$a" in
+        -*) ;;
+        */*) in_project "$a" "$curdir" && deny "mktemp внутри проекта ($a)." ;;
+        *) [ "$tmpflag" = 0 ] && [ "$here_project" = 1 ] && deny "mktemp $a создаст файл в каталоге проекта." ;;
+      esac
+    done
+    continue
+  fi
+
   # Файловые команды с путями только вне проекта (mkdir временной папки из проекта) — можно.
   case "$cmd" in
     mkdir|rmdir|rm|touch|mv|chmod)
