@@ -319,7 +319,7 @@ while IFS= read -r line; do
           tgt=$(clone_target ${rest[@]+"${rest[@]}"})
           if [ -n "$tgt" ]; then
             write_in_project "$tgt" "$gitdir" && deny "git clone внутрь проекта ($tgt)."
-            MKDIRS+=("$(norm "$tgt" "$gitdir")")
+            CLONED+=("$(norm "$tgt" "$gitdir")")
           fi ;;
         *)
           if in_project . "$gitdir"; then

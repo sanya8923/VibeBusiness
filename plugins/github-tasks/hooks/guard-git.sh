@@ -181,6 +181,9 @@ while IFS= read -r line; do
   done
   [ "$i" -lt "$n" ] || continue
   sub=${w[$i]}
+  # ещё не созданный каталог (mkdir в этой же команде) — по ближайшему родителю
+  gd=$(real_dir "$gitdir"); [ -n "$gd" ] || continue
+  gitdir=$gd
   root=$(hk_root "$gitdir")
   [ -n "$root" ] && hk_enabled "$root" || continue
   base=$(hk_base_branch "$root")
@@ -188,7 +191,7 @@ while IFS= read -r line; do
   args=("${w[@]:$((i+1))}")
   na=${#args[@]}
   if [ "$sub" = clone ]; then
-    t=$(clone_target ${args[@]+"${args[@]}"}); [ -n "$t" ] && MKDIRS+=("$(norm "$t" "$gitdir")")
+    t=$(clone_target ${args[@]+"${args[@]}"}); [ -n "$t" ] && CLONED+=("$(norm "$t" "$gitdir")")
     continue
   fi
 

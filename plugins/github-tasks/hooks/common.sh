@@ -57,6 +57,9 @@ hk_default_branch() {
 # команды), prevdir (прежний — для cd - и $OLDPWD), subval (значение последней
 # подстановки $(…)), VARN/VARV (переменные, присвоенные в этой команде).
 # Ограничения разбора (форма записи — нарочно необычная):
+# - всё под временной папкой из $(mktemp -d) считается вне репозиториев, подпуть и
+#   значение флага mkdir (mkdir -m 755 x) — созданными каталогами; удачность git clone
+#   не проверяется; local вне функции считается присваиванием;
 # - значение подстановки одно на простую команду — последней; в форме с двумя
 #   подстановками в одной команде (tee "$(pwd)/x" < "$(mktemp)") первая раскроется
 #   значением второй;
@@ -65,7 +68,7 @@ hk_default_branch() {
 # - popd при пустом стеке возвращает к каталогу сессии (bash в этом случае остаётся на
 #   месте и печатает ошибку).
 TMPBASE=${TMPDIR:-/tmp}; TMPBASE=${TMPBASE%/}
-VARN=(); VARV=(); subval="?"; curdir=""; prevdir=""; MKDIRS=()
+VARN=(); VARV=(); subval="?"; curdir=""; prevdir=""; MKDIRS=(); CLONED=()
 
 # Можно ли считать, что cd в каталог $1 (уже нормализованный) удастся: каталог есть, это
 # временная папка из $(mktemp -d) или его создаёт mkdir или git clone раньше в этой же
@@ -76,8 +79,21 @@ dir_reachable() {
   [ -d "$1" ] && return 0
   tb=$(norm "$TMPBASE" /)
   case "$1" in "$TMPBASE"/mktemp|"$TMPBASE"/mktemp/*|"$tb"/mktemp|"$tb"/mktemp/*) return 0 ;; esac
-  for m in ${MKDIRS[@]+"${MKDIRS[@]}"}; do case "$1/" in "$m"/*) return 0 ;; esac; done
+  for m in ${MKDIRS[@]+"${MKDIRS[@]}"} ${CLONED[@]+"${CLONED[@]}"}; do case "$1/" in "$m"/*) return 0 ;; esac; done
   return 1
+}
+
+# Каталог, по которому определять репозиторий и ветку для ещё не существующего $1:
+# ближайший существующий родитель (подкаталог из mkdir остаётся частью репозитория).
+# Пусто — каталог вне репозиториев: цель git clone или временная папка из mktemp -d.
+real_dir() {
+  local d=$1 m tb
+  [ -d "$d" ] && { echo "$d"; return; }
+  tb=$(norm "$TMPBASE" /)
+  case "$d" in "$TMPBASE"/mktemp|"$TMPBASE"/mktemp/*|"$tb"/mktemp|"$tb"/mktemp/*) return ;; esac
+  for m in ${CLONED[@]+"${CLONED[@]}"}; do case "$d/" in "$m"/*) return ;; esac; done
+  while [ "$d" != / ] && [ -n "$d" ] && [ ! -d "$d" ]; do d=${d%/*}; done
+  echo "${d:-/}"
 }
 
 # Значение переменной, присвоенной в этой команде, или известной ($TMPDIR, $HOME, $PWD, $OLDPWD).

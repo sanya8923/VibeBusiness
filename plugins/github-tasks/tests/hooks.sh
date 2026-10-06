@@ -189,6 +189,13 @@ git push --force'
 run block "$SB" 'cd /nonexistent-dir; git commit -m x'
 run block "$SB" 'pushd /nonexistent; git commit -m x'
 run allow "$WT" 'cd "$(git rev-parse --show-toplevel)" && git commit -m x'
+run block "$WT" 'mkdir -p out && cd out && git add -A'
+run block "$WT" 'mkdir out && cd out && git commit -am x'
+run block "$WT" 'mkdir -p out; cd out; git push --force'
+run block "$SB" 'mkdir -p sub && cd sub && git commit -m x'
+run block "$SB" 'mkdir -p a/b && cd a/b && git commit -m x'
+run allow "$WT" 'mkdir -p out && cd out && git status'
+run allow "$SB" "git clone https://github.com/o/r.git \$(mktemp -d)/r && cd r"
 run allow "$WT" 'ROOT=$(git rev-parse --show-toplevel); git -C "$ROOT" commit -m x'
 run allow "$SB" "export WT=$WT; cd \"\$WT\" && git commit -m x"
 run allow "$SB" "D=\$(mktemp -d) && cd \"\$D\" && git init -q && git commit -m x"
