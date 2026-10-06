@@ -152,7 +152,28 @@ run block "$WT" 'cat <<< x"$(git add -A)"'
 run block "$WT" 'echo x > "$(git add -A)"'
 run block "$WT" 'git commit -m "5">/dev/null -a'
 
+echo "== подстановки команд как вложенные команды (вторая приёмка #20)"
+run block "$WT" 'git commit > "$(mktemp)" -a'
+run block "$WT" 'git push origin > "$(mktemp)" --force'
+run block "$WT" 'git add 2> "$(mktemp)" -A'
+run block "$WT" 'git commit -m x 2>"$(mktemp)" -a'
+run block "$WT" 'git push origin "$(git branch --show-current)" --force'
+run block "$WT" 'git push origin $(git branch --show-current) --force'
+run block "$WT" 'git push origin `git branch --show-current` --force'
+run block "$WT" 'git push origin "$(git branch --show-current)":main'
+run block "$WT" 'git commit -m "$(echo x)" -a'
+run block "$WT" 'git commit -m \5>/dev/null -a'
+run block "$WT" 'echo "$( (git status && git add -A) )"'
+run block "$WT" 'x=$(git add -A)'
+
 echo "== должны проходить"
+run allow "$WT" 'git push -u origin "$(git branch --show-current)"'
+run allow "$WT" "git commit -m \"\$(cat <<'EOF'
+текст с git add -A и git push --force
+EOF
+)\""
+run allow "$WT" 'echo x > "$(mktemp)"'
+run allow "$WT" 'git log --format="%s" -1 "$(git rev-parse HEAD)"'
 run allow "$WT" 'echo x > "a\"b" ; git status'
 run allow "$WT" 'git commit -m "5">/dev/null'
 run allow "$WT" 'cat <<< "$(git log -1)"'
