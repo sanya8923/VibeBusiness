@@ -20,6 +20,7 @@
 #   --show-toplevel)" вместо «.»;
 # - git push origin x:heads/main (git сам дописывает до main);
 # - git merge на основной ветке (коммит слияния) не запрещается;
+# - env -C <каталог> git … — смену каталога через env хук не отслеживает;
 # - очень длинная команда (150+ вызовов git, скрипт на сотни КБ) может не уложиться в
 #   таймаут хука 10 с — тогда Claude Code выполнит её без проверки.
 set -uo pipefail
@@ -78,7 +79,13 @@ current_branch() {  # каталог репозитория
 }
 
 while IFS= read -r line; do
-  IFS=$'\037' read -r -a w <<<"$line"
+  IFS=$'\037' read -r -a raw <<<"$line"
+  # Перенаправления tokenize.awk помечает \002 — это не аргументы команды, пропускаем.
+  w=()
+  for t in ${raw[@]+"${raw[@]}"}; do
+    case "$t" in $'\002'*) continue ;; esac
+    w+=("$t")
+  done
   n=${#w[@]}
   [ "$n" -gt 0 ] || continue
   i=0
@@ -96,11 +103,28 @@ while IFS= read -r line; do
   # Обёртка (timeout 30, nice -n 5, sudo -E, env -u X, xargs -0 …): у неё свои флаги и
   # аргументы, поэтому сама команда — первое следующее слово, которое и есть git.
   case "$name" in
-    time|command|builtin|exec|nohup|nice|sudo|doas|xargs|env|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer)
-      k=$((i+1))
-      while [ "$k" -lt "$n" ] && [ "${w[$k]##*/}" != git ]; do k=$((k+1)); done
-      [ "$k" -lt "$n" ] || continue
-      i=$k; name=git ;;
+    time|command|builtin|exec|nohup|nice|sudo|doas|xargs|env|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer|arch)
+      # Пропускаем флаги обёртки, их значения, числа и длительности, VAR=…, вложенные
+      # обёртки. Первое другое слово — это уже не git, а иная команда (echo git … — текст).
+      k=$((i+1)); pf=0; found=""
+      while [ "$k" -lt "$n" ]; do
+        wk=${w[$k]}
+        if [ "${wk##*/}" = git ]; then found=$k; break; fi
+        case "$wk" in
+          time|command|builtin|exec|nohup|nice|sudo|doas|xargs|env|timeout|gtimeout|stdbuf|ionice|caffeinate|chronic|unbuffer|arch) pf=0 ;;
+          -?) pf=1 ;;
+          --*=*) pf=0 ;;
+          --*) pf=1 ;;   # длинный флаг без «=» может взять значение следующим словом
+          -*) pf=0 ;;
+          *=*) pf=0 ;;
+          *) if [[ "$wk" =~ ^[0-9.]+[smhd]?$ ]]; then pf=0
+             elif [ "$pf" = 1 ]; then pf=0
+             else break; fi ;;
+        esac
+        k=$((k+1))
+      done
+      [ -n "$found" ] || continue
+      i=$found; name=git ;;
   esac
 
   case "$name" in
@@ -160,14 +184,15 @@ while IFS= read -r line; do
 
     switch|checkout)
       # Запоминаем, на какую ветку команда переключается, — для проверки коммита ниже.
-      j=0; target=""
+      j=0; target=""; extra=0
       while [ "$j" -lt "$na" ]; do
         a=${args[$j]}
         case "$a" in
           --) target=""; break ;;
           -c|-C|-b|-B|--create|--force-create|--orphan) target=${args[$((j+1))]:-}; break ;;
           -*) ;;
-          *) if [ -z "$target" ]; then
+          *) if [ -n "$target" ]; then extra=1
+             else
                # git checkout <файл> — не переход на ветку: считаем веткой, только если она есть
                if git -C "$gitdir" rev-parse -q --verify "refs/heads/$a" >/dev/null 2>&1 \
                   || git -C "$gitdir" rev-parse -q --verify "refs/remotes/origin/$a" >/dev/null 2>&1; then
@@ -177,7 +202,8 @@ while IFS= read -r line; do
         esac
         j=$((j+1))
       done
-      if [ -n "$target" ]; then sw_dir=$root; sw_branch=$target; fi ;;
+      # git checkout <ветка> <пути> восстанавливает файлы и не меняет ветку.
+      if [ -n "$target" ] && [ "$extra" = 0 ]; then sw_dir=$root; sw_branch=$target; fi ;;
 
     commit)
       j=0
@@ -201,7 +227,7 @@ while IFS= read -r line; do
       fi ;;
 
     push)
-      j=0; pos=0
+      j=0; pos=0; tags=0
       while [ "$j" -lt "$na" ]; do
         a=${args[$j]}
         case "$a" in
@@ -209,6 +235,7 @@ while IFS= read -r line; do
             deny "git push $a запрещён: отправляет все ветки, включая основную." "Отправляй только ветку задачи: git push -u origin issue-N." ;;
           --for*|--mi|--mir|--mirr|--mirro|--mirror)
             deny "git push $a запрещён: перезапись истории на GitHub уничтожает чужую работу." "Если push отклонён — забери изменения (git pull --rebase) и отправь снова без force." ;;
+          --tags) tags=1 ;;
           --repo|--receive-pack|--exec|--push-option) j=$((j+1)) ;;
           --*) ;;
           -?*)
@@ -218,6 +245,9 @@ while IFS= read -r line; do
             pos=$((pos+1))
             if [ "$pos" -ge 2 ]; then   # первое позиционное — remote, дальше — refspec
               case "$a" in +*) deny "git push $a запрещён: «+» перед веткой — это force push." "Отправляй ветку без «+»." ;; esac
+              case "$a" in
+                :|*'*'*) deny "git push $a запрещён: отправляет все совпадающие ветки, включая основную." "Отправляй только ветку задачи: git push -u origin issue-N." ;;
+              esac
               dst=${a#*:}; dst=${dst#refs/heads/}
               [ "$dst" = HEAD ] && dst=$(current_branch "$gitdir")
               if [ "$dst" = "$default" ] || { [ -n "$base" ] && [ "$dst" = "$base" ]; }; then
@@ -229,7 +259,7 @@ while IFS= read -r line; do
         j=$((j+1))
       done
       # Без refspec push отправляет текущую ветку — проверяем её.
-      if [ "$pos" -lt 2 ]; then
+      if [ "$pos" -lt 2 ] && [ "$tags" = 0 ]; then
         cur=$(current_branch "$gitdir")
         if [ -n "$cur" ] && { [ "$cur" = "$default" ] || { [ -n "$base" ] && [ "$cur" = "$base" ]; }; }; then
           deny "git push с ветки $cur — это отправка прямо в неё мимо PR." \

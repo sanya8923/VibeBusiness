@@ -9,11 +9,14 @@
 #     группы и подстановки команд разбираются как отдельные команды;
 #   - тела heredoc (<<TAG … TAG) пропускаются — это данные, а не команды;
 #   - # в начале слова — комментарий до конца строки;
-#   - ${…} остаётся частью слова.
+#   - ${…} остаётся частью слова;
+#   - перенаправления ([N]>, >>, >|, [N]<, &>, &>>, [N]>&M, <<<) распознаются только вне
+#     кавычек и выводятся отдельным словом с пометкой \002 в начале: «\002>файл».
+#     Запреты git такие слова пропускают, хук «только чтение» по ним видит запись.
 # Это не полный разбор bash, а достаточный для запретов: ошибиться он должен в сторону
 # «увидеть лишнюю команду», а не «пропустить настоящую».
 
-BEGIN { US = sprintf("%c", 31) }
+BEGIN { US = sprintf("%c", 31); RD = sprintf("%c", 2) }
 { src = src $0 "\n" }
 
 function flush_word() {
@@ -24,6 +27,24 @@ function flush_seg() {
   flush_word()
   if (seg != "") print seg
   seg = ""
+}
+
+# Цель перенаправления: слово после оператора (кавычки снимаются). Выводится одним
+# словом «\002<оператор><цель>».
+function redirect(   t, ch, qq) {
+  while (substr(src, i, 1) == " " || substr(src, i, 1) == "\t") i++
+  t = ""
+  while (i <= n) {
+    ch = substr(src, i, 1)
+    if (index(" \t\n;&|()<>", ch) > 0) break
+    if (ch == "'" || ch == "\"") {
+      qq = ch; i++
+      while (i <= n && substr(src, i, 1) != qq) { t = t substr(src, i, 1); i++ }
+      i++; continue
+    }
+    t = t ch; i++
+  }
+  flush_word(); word = RD op t; inword = 1; flush_word()
 }
 
 END {
@@ -61,6 +82,8 @@ END {
       word = word substr(src, i, j); inword = 1; i += j; continue
     }
     if (c == "$" && nx == "(") { flush_seg(); i += 2; continue }
+    # here-string <<< — оператор со своей целью, не heredoc
+    if (substr(src, i, 3) == "<<<") { op = "<<<"; i += 3; redirect(); continue }
     if (c == "<" && nx == "<" && substr(src, i + 2, 1) != "<") {
       # heredoc: запомнить метку, тело пропустить после конца строки
       flush_word()
@@ -77,6 +100,19 @@ END {
       }
       if (tag != "") { ntags++; tags[ntags] = tag; dashes[ntags] = dash }
       i = j; continue
+    }
+    # перенаправление: [N]> [N]>> >| [N]< <> [N]>& <& &> &>>
+    if (c == ">" || c == "<" || (c == "&" && nx == ">")) {
+      if (inword && word ~ /^[0-9]+$/) { op = word; word = ""; inword = 0 } else { flush_word(); op = "" }
+      if (c == "&") {
+        op = op "&>"; i += 2
+        if (substr(src, i, 1) == ">") { op = op ">"; i++ }
+      } else {
+        op = op c; i++; c2 = substr(src, i, 1)
+        if (c == ">" && (c2 == ">" || c2 == "|" || c2 == "&")) { op = op c2; i++ }
+        else if (c == "<" && (c2 == "&" || c2 == ">")) { op = op c2; i++ }
+      }
+      redirect(); continue
     }
     if (c == "\n") {
       flush_seg(); i++
