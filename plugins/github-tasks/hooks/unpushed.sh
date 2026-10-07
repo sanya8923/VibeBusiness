@@ -16,6 +16,13 @@ CWD=$(hk_field cwd)
 root=$(hk_root "$CWD")
 [ -n "$root" ] && hk_enabled "$root" || exit 0
 
+# Монорепозиторий (поле paths): в основной копии вне папок процесса работают прямо в
+# основной ветке, и незапушенное там к задачам не относится. Поэтому в основной копии
+# считаем только коммиты, которые трогают папки процесса. Рабочие копии задач — целиком.
+PSPEC=()
+mg=top; [ "$(git -C "$root" config --bool core.ignorecase 2>/dev/null)" = true ] && mg=top,icase
+while IFS= read -r p; do [ -n "$p" ] && PSPEC+=(":($mg)$p"); done < <(hk_paths "$root")
+
 notes=""
 while IFS= read -r line; do
   case "$line" in worktree\ *) wt=${line#worktree } ;; *) continue ;; esac
@@ -26,6 +33,11 @@ while IFS= read -r line; do
     notes="$notes\n- $name: есть незакоммиченные правки"
   fi
   if git -C "$wt" rev-parse -q --verify '@{u}' >/dev/null 2>&1; then
+    if [ "$wt" = "$root" ] && [ ${#PSPEC[@]} -gt 0 ]; then
+      ahead=$(git -C "$wt" rev-list --count --full-history '@{u}..HEAD' -- "${PSPEC[@]}" 2>/dev/null || echo 0)
+      [ "$ahead" -gt 0 ] && notes="$notes\n- $name: незапушенных коммитов в папках процесса — $ahead"
+      continue
+    fi
     ahead=$(git -C "$wt" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
     [ "$ahead" -gt 0 ] && notes="$notes\n- $name: незапушенных коммитов — $ahead"
   elif [ "$wt" != "$root" ]; then
