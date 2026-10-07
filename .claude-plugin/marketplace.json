@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "vibe-business",
+  "description": "Подарки Vibe Business: плагины Claude Code для работы с задачами, агентами и автоматизацией",
+  "owner": {
+    "name": "Vibe Business",
+    "url": "https://t.me/vibe_bus"
+  },
+  "plugins": [
+    {
+      "name": "github-tasks",
+      "source": "./plugins/github-tasks",
+      "description": "Процесс задач проекта с кодом на GitHub: задача → своя ветка у каждого агента → PR → независимая приёмка → слияние",
+      "author": {
+        "name": "Vibe Business"
+      }
+    }
+  ]
+}

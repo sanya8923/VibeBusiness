@@ -1,0 +1,10 @@
+{
+  "paths": [
+    "plugins/github-tasks/",
+    ".claude-plugin/"
+  ],
+  "checks": [
+    "claude plugin validate .",
+    "claude plugin validate plugins/github-tasks"
+  ]
+}
