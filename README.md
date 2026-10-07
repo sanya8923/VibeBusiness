@@ -32,7 +32,6 @@
 |---|---|
 | [error-trigger-selfhealing](workflows/error-trigger-selfhealing/) | Ловит ошибки воркфлоу через Error Trigger и разбирает их с помощью AI |
 | [error_workflow_with_n8n_doctor.json](workflows/error_workflow_with_n8n_doctor.json) | Обработчик ошибок для связки с n8n Doctor |
-| [telegram_payment.json](workflows/telegram_payment.json) | Оплата в Telegram-боте |
 | [GazelleType.json](workflows/GazelleType.json) | Пример из ролика на канале |
 | [Barbershop Ai Agent + MCP Server](workflows/Barbershop%20Ai%20Agent%20+%20MCP%20Server) | AI-агент записи в барбершоп с MCP-сервером |
 
